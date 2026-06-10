@@ -1,0 +1,39 @@
+@{
+    ViewData["Title"] = "Home";
+    Layout = "~/Views/Shared/_PublicLayout.cshtml";
+}
+
+<!-- Hero Section with cloud background -->
+<section class="home-hero">
+    <div class="home-hero-content">
+        <h1 class="source-code-pro-home_font">
+            A professional<br />
+            <span class="orange">user</span> management<br />
+            portal
+        </h1>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+        <div class="home-actions">
+            <a asp-controller="Dashboard" asp-action="Index" class="orange-btn">
+                Dashboard
+            </a>
+        </div>
+        }
+        else
+        {
+        <div class="home-actions">
+            <a asp-controller="Account" asp-action="Register" class="orange-btn">
+                Register
+            </a>
+
+            <a asp-controller="Account" asp-action="Login" class="dark-btn">
+                Login
+            </a>
+        </div>
+        }
+        
+    </div>
+</section>
+
+
+<section class="blank-section"></section> 

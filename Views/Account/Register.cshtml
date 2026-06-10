@@ -1,0 +1,178 @@
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+@{
+    ViewData["Title"] = "Register";
+    Layout = "~/Views/Shared/_AuthLayout.cshtml";
+    var siteKey = Configuration["ReCaptcha:SiteKey"];
+}
+
+<section class="form-page">
+    <div class="form-card large">
+        <h2>Program Registration</h2>
+        <p>Please fill out this form to register for our program.</p>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <div asp-validation-summary="All"></div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <form asp-controller="Account" asp-action="Register" method="post" id="registerForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="g-recaptcha-response" name="g-recaptcha-response" />
+
+            <!-- Full Name (full width) -->
+            <div class="form-group">
+                <label for="regFullName">First name <span class="required">*</span></label>
+                <input type="text" id="regFullName" name="FullName" required
+                       placeholder="Enter your full name">
+            </div>
+
+            <!-- Email + Phone (two columns) -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="regEmail">Email address <span class="required">*</span></label>
+                    <input type="email" id="regEmail" name="Email" required
+                           placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="regMobile">Phone number</label>
+                    <input type="text" id="regMobile" name="MobileNo" required
+                           placeholder="Enter 10-digit number" maxlength="10" pattern="\d{10}">
+                </div>
+            </div>
+
+            <!-- Date of Birth (full width) -->
+            <div class="form-group">
+                <label for="regDOB">Date of Birth <span class="required">*</span></label>
+                <input type="text" id="regDOB" name="DOB" required placeholder="Select Date of Birth...">
+            </div>
+
+            <!-- Username (full width) -->
+            <div class="form-group">
+                <label for="regUsername">Username</label>
+                <input type="text" id="regUsername" name="Username" required
+                       placeholder="Choose a username">
+            </div>
+
+            <!-- Password (full width) -->
+            <div class="form-group">
+                <label for="regPassword">Password</label>
+                <input type="password" id="regPassword" name="Password" required
+                       placeholder="Min 6 characters" minlength="6">
+            </div>
+
+            <!-- Confirm Password (full width) -->
+            <div class="form-group">
+                <label for="regConfirmPassword">Confirm Password</label>
+                <input type="password" id="regConfirmPassword" name="confirmPassword" required
+                       placeholder="Re-enter your password">
+            </div>
+
+            <!-- Role (full width select) -->
+            <div class="form-group">
+                <label for="regRole">Role</label>
+                <select id="regRole" name="RoleId" required class="custom-select" data-variant="light">
+                    <option value="">Select Role...</option>
+                    <option value="1">Admin</option>
+                    <option value="2">User</option>
+                </select>
+            </div>
+
+            <!-- Gender (radio buttons) -->
+            <div class="form-group">
+                <label>Gender <span class="required">*</span></label>
+                <div class="radio-group">
+                    <div class="radio-item">
+                        <input type="radio" id="male" name="Gender" value="Male" required>
+                        <label for="male" class="radio-label">Male</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" id="female" name="Gender" value="Female">
+                        <label for="female" class="radio-label">Female</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" id="other" name="Gender" value="Other">
+                        <label for="other" class="radio-label">Other</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CAPTCHA Section -->
+            <div class="form-group captcha-container">
+                <label>Security Check <span class="required">*</span></label>
+
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <!-- This <img> tag calls our new backend method to get the image! -->
+                    <img src="/Account/GetCaptchaImage" id="captchaImage" alt="CAPTCHA Image" style="border: 1px solid #ddd; border-radius: 4px;" />
+
+                    <!-- Refresh icon -->
+                    <button type="button" class="btn" title="Get a new image"
+                            style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; padding: 0;"
+                            onclick="document.getElementById('captchaImage').src = '/Account/GetCaptchaImage?' + new Date().getTime();">
+                       
+                        <i class="fas fa-sync-alt my-custom-icon"></i>
+                    </button>
+                </div>
+
+                <input type="text" name="CaptchaInput" required
+                       placeholder="Type the characters you see above" autocomplete="off" maxlength="5">
+            </div>
+            <button type="submit" class="submit-btn">Register Now</button>
+        </form>
+
+        <div class="form-footer">
+            <a asp-action="Login">Already have an account? <strong>Login</strong></a>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        // Initialize Flatpickr for DOB selection
+        flatpickr("#regDOB", {
+            dateFormat: "Y-m-d",
+            maxDate: "today", // Native prevention of future date selection
+            disableMobile: "true",
+            position: "above" // Forces the pop-up to appear just above the input field
+        });
+
+        // Client-side validation on submit
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            // Password match check
+            var password = document.getElementById('regPassword').value;
+            var confirm = document.getElementById('regConfirmPassword').value;
+            if (password !== confirm) {
+                e.preventDefault();
+                alert('Passwords do not match!');
+                document.getElementById('regConfirmPassword').focus();
+                return;
+            }
+
+            // Future DOB fallback check
+            var dobInput = document.getElementById('regDOB');
+            if (dobInput.value) {
+                var selectedDate = new Date(dobInput.value);
+                var today = new Date();
+                today.setHours(0, 0, 0, 0);
+                if (selectedDate > today) {
+                    e.preventDefault();
+                    alert('Date of Birth cannot be in the future!');
+                    dobInput.focus();
+                    return;
+                }
+            }
+
+            // Execute reCAPTCHA if validation passes
+            e.preventDefault();
+            grecaptcha.ready(function() {
+                grecaptcha.execute('@siteKey', {action: 'submit'}).then(function(token) {
+                    document.getElementById('g-recaptcha-response').value = token;
+                    document.getElementById('registerForm').submit();
+                });
+            });
+        });
+    </script>
+}

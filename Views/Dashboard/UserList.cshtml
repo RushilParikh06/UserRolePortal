@@ -1,0 +1,371 @@
+@model IEnumerable<UserRolePortal.Models.User>
+@{
+    ViewData["Title"] = "User List";
+}
+
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-white">User Management</h1>
+            <p class="mb-0" style="color: rgba(255,255,255,0.6);">Manage all registered users</p>
+        </div>
+        <a asp-controller="Account" asp-action="Register"
+           class="btn px-4 py-2 shadow-sm" style="background: #ff4b00; color: #000; border: none; font-weight: 700;">
+            <i class="fa-solid fa-fw fa-user-plus" color = #000000></i>  Add New User
+        </a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Summary Bar -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-3 d-flex align-items-center">
+                    <div class="rounded-3 p-2 me-3" style="background: rgba(255, 75, 0, 0.15);">
+                        <i class="fas fa-users" style="color: #ff4b00;"></i>
+                    </div>
+                    <div>
+                        <small style="color: rgba(255,255,255,0.6);">Total Users</small>
+                        <h5 class="mb-0 fw-bold text-white">@Model.Count()</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-3 d-flex align-items-center">
+                    <div class="rounded-3 p-2 me-3" style="background: rgba(255, 106, 42, 0.15);">
+                        <i class="fas fa-user-shield" style="color: #ff6a2a;"></i>
+                    </div>
+                    <div>
+                        <small style="color: rgba(255,255,255,0.6);">Admins</small>
+                        <h5 class="mb-0 fw-bold text-white">@Model.Count(u => u.RoleId == 1)</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-3 d-flex align-items-center">
+                    <div class="rounded-3 p-2 me-3" style="background: rgba(255, 75, 0, 0.1);">
+                        <i class="fas fa-user" style="color: #ff4b00;"></i>
+                    </div>
+                    <div>
+                        <small style="color: rgba(255,255,255,0.6);">Regular Users</small>
+                        <h5 class="mb-0 fw-bold text-white">@Model.Count(u => u.RoleId == 2)</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-3 d-flex align-items-center">
+                    <div class="rounded-3 p-2 me-3" style="background: rgba(255, 106, 42, 0.1);">
+                        <i class="fas fa-calendar-alt" style="color: #ff6a2a;"></i>
+                    </div>
+                    <div>
+                        <small style="color: rgba(255,255,255,0.6);">Latest Joined</small>
+                        <h5 class="mb-0 fw-bold text-white" style="font-size: 14px;">
+                            @{
+                                var latest = Model.OrderByDescending(u => u.CreatedDate).FirstOrDefault();
+                            }
+                            @(latest?.CreatedDate?.ToString("dd MMM") ?? "N/A")
+                        </h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body py-3">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text border-end-0" style="background: #1a1617; border-color: rgba(255,255,255,0.15); color: rgba(255,255,255,0.5);">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" id="searchInput" class="form-control border-start-0"
+                               placeholder="Search users by name, email, or username..."
+                               style="background: #1a1617; color: #fff; border-color: rgba(255,255,255,0.15);"
+                               onkeyup="filterTable()">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select id="roleFilter" class="form-select custom-select" data-variant="dark" onchange="filterTable()"
+                            style="background: #1a1617; color: #fff; border-color: rgba(255,255,255,0.15);">
+                        <option value="">All Users</option>
+                        <option value="Admin">Admin</option>
+                        <option value="User">User</option>
+                    </select>
+                </div>
+                <div class="col-md-3 text-end">
+                    <span class="small" id="resultCount" style="color: rgba(255,255,255,0.6);">
+                        Showing <strong>@Model.Count()</strong> users
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header py-3 d-flex align-items-center justify-content-between" style="background: #1a1617; border-bottom: 1px solid rgba(255,255,255,0.1);">
+            <h6 class="m-0 fw-bold text-white">
+                <i class="fas fa-table me-2" style="color: #ff5b00;"></i>Registered Users
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="userTable">
+                    <thead>
+                        <tr style="background: #1a1617; color: #ffffff; border-bottom: 2px solid #ff5b00;">
+                            <th class="py-3 px-4" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">#</th>
+                            <th class="py-3 px-3" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Full Name</th>
+                            <th class="py-3 px-3" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Username</th>
+                            <th class="py-3 px-3" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Email</th>
+                            <th class="py-3 px-3" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Mobile</th>
+                            <th class="py-3 px-3" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">DOB</th>
+                            <th class="py-3 px-3" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Role</th>
+                            <th class="py-3 px-3" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Joined</th>
+                            <th class="py-3 px-3 text-center" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{ int rowIndex = 1; }
+                        @foreach (var user in Model)
+                        {
+                            <tr data-role="@(user.RoleId == 1 ? "Admin" : "User")">
+                                <td class="px-4 fw-semibold" style="color: rgba(255,255,255,0.5);">@rowIndex</td>
+                                <td class="px-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center me-2"
+                                             style="width: 32px; height: 32px; background: @(user.RoleId == 1 ? "rgba(255,75,0,0.15)" : "rgba(255,106,42,0.1)"); font-size: 13px; font-weight: 700; color: @(user.RoleId == 1 ? "#ff4b00" : "#ff6a2a");">
+                                            @user.FullName.Substring(0, 1).ToUpper()
+                                        </div>
+                                        <span class="fw-semibold text-white">@user.FullName</span>
+                                    </div>
+                                </td>
+                                <td class="px-3"><code class="px-2 py-1 rounded" style="background: rgba(255,255,255,0.08); color: #ff6a2a;">@user.Username</code></td>
+                                <td class="px-3" style="color: rgba(255,255,255,0.6);">@user.Email</td>
+                                <td class="px-3">@user.MobileNo</td>
+                                <td class="px-3">@user.DOB.ToString("dd MMM yyyy")</td>
+                                <td class="px-3">
+                                    @if (user.RoleId == 1)
+                                    {
+                                        <span class="badge px-3 py-2 rounded-pill" style="background: rgba(255,75,0,0.15); color: #ff4b00;">
+                                            <i class="fas fa-shield-alt me-1"></i>Admin
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge px-3 py-2 rounded-pill" style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8);">
+                                            <i class="fas fa-user me-1"></i>User
+                                        </span>
+                                    }
+                                </td>
+                                <td class="px-3 small" style="color: rgba(255,255,255,0.5);">
+                                    @(user.CreatedDate.HasValue ? user.CreatedDate.Value.ToString("dd MMM yyyy") : "N/A")
+                                </td>
+                                <td class="px-9 text-center">
+                                    <button class="btn btn-sm me-1" title="Edit User"
+                                            style="border: 1px solid #ff4b00; color: #ff4b00;"
+                                            data-bs-toggle="modal" data-bs-target="#editModal"
+                                            onclick="loadUserData(@user.UserId, '@user.FullName', '@user.Email', '@user.MobileNo', @user.RoleId)">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm" title="Delete User"
+                                            style="border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.7);"
+                                            data-bs-toggle="modal" data-bs-target="#deleteModal"
+                                            onclick="setDeleteId(@user.UserId, '@user.FullName')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            rowIndex++;
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="background: #120f10; color: #fff;">
+            <div class="modal-header border-0" style="background: #1a1617;">
+                <h5 class="modal-title fw-bold text-white"><i class="fas fa-edit me-2" style="color: #ff4b00;"></i>Edit User</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="editForm">
+                    <input type="hidden" id="editUserId" name="UserId" />
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-white">Full Name</label>
+                        <input type="text" class="form-control" id="editFullName" name="FullName" required style="background: #1a1617; color: #fff; border-color: rgba(255,255,255,0.15);">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-white">Email</label>
+                        <input type="email" class="form-control" id="editEmail" name="Email" required style="background: #1a1617; color: #fff; border-color: rgba(255,255,255,0.15);">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-white">Phone</label>
+                        <input type="text" class="form-control" id="editMobileNo" name="MobileNo" required style="background: #1a1617; color: #fff; border-color: rgba(255,255,255,0.15);">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-white">Role</label>
+                        <select class="form-select custom-select" data-variant="dark" id="editRoleId" name="RoleId" style="background: #1a1617; color: #fff; border-color: rgba(255,255,255,0.15);">
+                            <option value="1">Admin</option>
+                            <option value="2">User</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn px-4" style="background: rgba(255,255,255,0.1); color: #fff; border: none;" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn px-4" style="background: #ff4b00; color: #000; border: none; font-weight: 700;" onclick="submitEdit()">
+                    <i class="fas fa-save me-1"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow" style="background: #120f10; color: #fff;">
+            <div class="modal-header border-0" style="background: #1a1617;">
+                <h5 class="modal-title fw-bold text-white"><i class="fas fa-exclamation-triangle me-2" style="color: #ff4b00;"></i>Delete User</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="fas fa-trash-alt fa-3x mb-3" style="color: #ff4b00;"></i>
+                <p class="mb-1 fw-semibold text-white">Are you sure you want to delete</p>
+                <p class="fw-bold" style="color: #ff4b00;" id="deleteUserName"></p>
+                <input type="hidden" id="deleteUserId" />
+                <small style="color: rgba(255,255,255,0.5);">This action cannot be undone.</small>
+            </div>
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" class="btn px-4" style="background: rgba(255,255,255,0.1); color: #fff; border: none;" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn px-4" style="background: #ff4b00; color: #000; border: none; font-weight: 700;" onclick="submitDelete()">
+                    <i class="fas fa-trash me-1"></i>Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Search & Filter functionality
+        function filterTable() {
+            var searchText = document.getElementById('searchInput').value.toLowerCase();
+            var roleFilter = document.getElementById('roleFilter').value;
+            var rows = document.querySelectorAll('#userTable tbody tr');
+            var visibleCount = 0;
+
+            rows.forEach(function(row) {
+                var text = row.textContent.toLowerCase();
+                var role = row.getAttribute('data-role');
+                var matchesSearch = text.includes(searchText);
+                var matchesRole = !roleFilter || role === roleFilter;
+
+                if (matchesSearch && matchesRole) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            document.getElementById('resultCount').innerHTML =
+                'Showing <strong>' + visibleCount + '</strong> of <strong>@Model.Count()</strong> users';
+        }
+
+        // Load user data into edit modal
+        function loadUserData(id, fullName, email, mobile, roleId) {
+            document.getElementById('editUserId').value = id;
+            document.getElementById('editFullName').value = fullName;
+            document.getElementById('editEmail').value = email;
+            document.getElementById('editMobileNo').value = mobile;
+            document.getElementById('editRoleId').value = roleId;
+
+            // Update custom dropdown display
+            var editSelect = document.getElementById('editRoleId');
+            var customWrapper = editSelect.nextElementSibling;
+            if (customWrapper && customWrapper._updateDisplay) {
+                customWrapper._updateDisplay();
+            }
+        }
+
+        // Set delete target
+        function setDeleteId(id, name) {
+            document.getElementById('deleteUserId').value = id;
+            document.getElementById('deleteUserName').textContent = name;
+        }
+
+        // Submit edit form
+        function submitEdit() {
+            var formData = {
+                UserId: document.getElementById('editUserId').value,
+                FullName: document.getElementById('editFullName').value,
+                Email: document.getElementById('editEmail').value,
+                MobileNo: document.getElementById('editMobileNo').value,
+                RoleId: document.getElementById('editRoleId').value
+            };
+
+            fetch('/Dashboard/UpdateUser', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message || 'Failed to update user.');
+                }
+            })
+            .catch(() => alert('Error updating user. Please try again.'));
+        }
+
+        // Submit delete
+        function submitDelete() {
+            var id = document.getElementById('deleteUserId').value;
+
+            fetch('/Dashboard/DeleteUser/' + id, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message || 'Failed to delete user.');
+                }
+            })
+            .catch(() => alert('Error deleting user. Please try again.'));
+        }
+    </script>
+}

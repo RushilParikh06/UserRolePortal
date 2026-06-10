@@ -1,0 +1,198 @@
+/* ============================= */
+/* Custom Dropdown Styles        */
+/* Orange + Dark theme           */
+/* ============================= */
+
+.custom-dropdown {
+    position: relative;
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+}
+
+.custom-dropdown-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    font-size: 14px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    user-select: none;
+}
+
+/* Arrow icon */
+.custom-dropdown-trigger .dd-arrow {
+    transition: transform 0.3s ease;
+    font-size: 12px;
+    color: #ff4b00;
+    flex-shrink: 0;
+}
+
+.custom-dropdown.open .dd-arrow {
+    transform: rotate(180deg);
+}
+
+/* Options panel */
+.custom-dropdown-options {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 999;
+    border-radius: 6px;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.custom-dropdown.open .custom-dropdown-options {
+    max-height: 220px;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.custom-dropdown-options-inner {
+    overflow-y: auto;
+    max-height: 220px;
+    scroll-behavior: smooth;
+}
+
+/* Smooth scrollbar for options */
+.custom-dropdown-options-inner::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-dropdown-options-inner::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-dropdown-options-inner::-webkit-scrollbar-thumb {
+    background: #ff4b00;
+    border-radius: 2px;
+}
+
+/* Individual option */
+.custom-dropdown-option {
+    padding: 10px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.custom-dropdown-option .dd-check {
+    font-size: 10px;
+    opacity: 0;
+    color: #ff4b00;
+    transition: opacity 0.15s ease;
+}
+
+.custom-dropdown-option.selected .dd-check {
+    opacity: 1;
+}
+
+/* =============================== */
+/* DARK variant (dashboard pages)  */
+/* =============================== */
+
+.custom-dropdown--dark .custom-dropdown-trigger {
+    background: #1a1617;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 10px 14px;
+    border-radius: 4px;
+    height: 42px;
+}
+
+.custom-dropdown--dark .custom-dropdown-trigger:hover {
+    border-color: #ff4b00;
+}
+
+.custom-dropdown--dark.open .custom-dropdown-trigger {
+    border-color: #ff4b00;
+    box-shadow: 0 0 0 2px rgba(255, 75, 0, 0.15);
+}
+
+.custom-dropdown--dark .custom-dropdown-options {
+    background: #1a1617;
+    border: 1px solid rgba(255, 75, 0, 0.25);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.custom-dropdown--dark .custom-dropdown-option {
+    color: rgba(255, 255, 255, 0.7);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.custom-dropdown--dark .custom-dropdown-option:last-child {
+    border-bottom: none;
+}
+
+.custom-dropdown--dark .custom-dropdown-option:hover {
+    background: rgba(255, 75, 0, 0.1);
+    color: #ffffff;
+}
+
+.custom-dropdown--dark .custom-dropdown-option.selected {
+    background: rgba(255, 75, 0, 0.15);
+    color: #ff4b00;
+    font-weight: 600;
+}
+
+/* =============================== */
+/* LIGHT variant (register page)   */
+/* =============================== */
+
+.custom-dropdown--light .custom-dropdown-trigger {
+    background: #ffffff;
+    color: #000000;
+    border: 1px solid #bbb;
+    padding: 8px 12px;
+    border-radius: 0;
+    height: 44px;
+}
+
+.custom-dropdown--light .custom-dropdown-trigger:hover {
+    border-color: #ff4b00;
+}
+
+.custom-dropdown--light.open .custom-dropdown-trigger {
+    border-color: #ff4b00;
+    box-shadow: 0 0 0 2px rgba(255, 75, 0, 0.1);
+}
+
+.custom-dropdown--light .custom-dropdown-options {
+    background: #1a1617;
+    border: 1px solid rgba(255, 75, 0, 0.3);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.custom-dropdown--light .custom-dropdown-option {
+    color: rgba(255, 255, 255, 0.75);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.custom-dropdown--light .custom-dropdown-option:last-child {
+    border-bottom: none;
+}
+
+.custom-dropdown--light .custom-dropdown-option:hover {
+    background: rgba(255, 75, 0, 0.12);
+    color: #ffffff;
+}
+
+.custom-dropdown--light .custom-dropdown-option.selected {
+    background: rgba(255, 75, 0, 0.18);
+    color: #ff4b00;
+    font-weight: 600;
+}
+
+/* Placeholder text style */
+.custom-dropdown-trigger .dd-placeholder {
+    color: #aaa;
+}

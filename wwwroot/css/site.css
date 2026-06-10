@@ -1,0 +1,295 @@
+/* ================================================ */
+/* Dashboard Layout Styles (site.css)               */
+/* Used by _Layout.cshtml for sidebar + topbar      */
+/* ================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+/* Reset & Core Structure */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #120f10;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    color: #ffffff;
+}
+
+
+
+#wrapper {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* ============================= */
+/* Left Vertical Sidebar         */
+/* Collapsed by default (icons)  */
+/* Expands on hover (full text)  */
+/* ============================= */
+
+#sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 60px;
+    min-width: 60px;
+    background: #120f10;
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.3s ease;
+    overflow: hidden;
+}
+
+#sidebar:hover {
+    width: 200px;
+    min-width: 200px;
+    box-shadow: 8px 0 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Nav links */
+#sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.65);
+    padding: 0.85rem 0;
+    padding-left: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    border-left: 3px solid transparent;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+}
+
+#sidebar .nav-link:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.06);
+    border-left: 3px solid #ff4b00;
+}
+
+#sidebar .nav-link.active {
+    color: #ffffff;
+    background-color: rgba(255, 75, 0, 0.12);
+    border-left: 3px solid #ff4b00;
+    font-weight: 600;
+}
+
+#sidebar .nav-link i {
+    width: 20px;
+    min-width: 20px;
+    text-align: center;
+    font-size: 16px;
+}
+
+/* Link text — hidden when collapsed, shown on hover */
+#sidebar .nav-link .link-text {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+    transition: opacity 0.2s ease 0s, width 0.3s ease;
+    margin-left: 0;
+}
+
+#sidebar:hover .nav-link .link-text {
+    opacity: 1;
+    width: auto;
+    margin-left: 12px;
+}
+
+/* Sidebar divider */
+#sidebar .sidebar-divider {
+    border-color: rgba(255, 255, 255, 0.08);
+    margin: 0.5rem 12px;
+}
+
+.top-button {
+    color: #ffffff;
+    font-size: 25px;
+    padding: 0.6rem 0;
+    padding-left: 17.5px;
+    padding-bottom: 30px;
+    height: 48px;
+    width: 70px
+}
+
+.top-button:hover {
+    color: #ff5b00;
+    border-radius: 4px;
+    align-content: initial;
+}
+
+/* ============================= */
+/* Right Content Area            */
+/* ============================= */
+
+#content-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    background: #120f10;
+    margin-left: 60px;
+}
+
+/* ============================= */
+/* Top Horizontal Bar            */
+/* ============================= */
+
+#topbar {
+    background-color: #120f10;
+    height: 64px;
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    z-index: 5;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+#topbar h4 {
+    font-size: 1.1rem;
+}
+
+/* ============================= */
+/* Main Page Content             */
+/* ============================= */
+
+.main-content {
+    padding: 0 1.5rem 2rem;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+/* ============================= */
+/* Card hover effects            */
+/* ============================= */
+
+.card {
+    border-radius: 10px;
+    background: #1a1617;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 16px rgba(255, 75, 0, 0.1) !important;
+}
+
+/* ============================= */
+/* Table improvements            */
+/* ============================= */
+
+.table {
+    --bs-table-bg: #120f10;
+    --bs-table-color: #ffffff;
+    --bs-table-hover-bg: rgba(255, 75, 0, 0.06);
+    --bs-table-hover-color: #ffffff;
+    --bs-table-border-color: rgba(255, 255, 255, 0.1);
+}
+
+.table > :not(caption) > * > * {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.table > thead {
+    border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(255, 75, 0, 0.06) !important;
+}
+
+/* ============================= */
+/* Bootstrap overrides for dark  */
+/* ============================= */
+
+/* Form controls */
+.form-control:focus,
+.form-select:focus {
+    border-color: #ff4b00;
+    box-shadow: 0 0 0 0.2rem rgba(255, 75, 0, 0.15);
+}
+
+/* List group items inherit dark bg */
+.list-group-item {
+    background-color: transparent;
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Alert dark overrides */
+.alert {
+    border-radius: 8px;
+}
+
+/* Modal backdrop blend */
+.modal-backdrop.show {
+    opacity: 0.7;
+}
+
+/* ============================= */
+/* Button refinements            */
+/* ============================= */
+
+.btn {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================= */
+/* Badge styling                 */
+/* ============================= */
+
+.badge {
+    font-weight: 600;
+    font-size: 12px;
+}
+
+/* ============================= */
+/* Scrollbar styling             */
+/* ============================= */
+
+#content-wrapper::-webkit-scrollbar,
+.main-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+#content-wrapper::-webkit-scrollbar-track,
+.main-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#content-wrapper::-webkit-scrollbar-thumb,
+.main-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+#content-wrapper::-webkit-scrollbar-thumb:hover,
+.main-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
