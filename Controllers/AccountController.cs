@@ -17,7 +17,7 @@ namespace UserRolePortal.Controllers
     {
         private readonly DbConnectionFactory _dbFactory;
 
-        // EF Core context is removed since we use Dapper!
+        
         public AccountController(DbConnectionFactory dbFactory)
         {
             _dbFactory = dbFactory;
@@ -72,8 +72,9 @@ namespace UserRolePortal.Controllers
             using (var connection = _dbFactory.CreateConnection())
             {
                 // Check if username already exists using Dapper
-                string userCheckSql = @"SELECT COUNT(1) FROM ""Users"" WHERE ""Username"" = @Username";
-                int userExists = await connection.ExecuteScalarAsync<int>(userCheckSql, new { Username = user.Username });
+                int userExists = await connection.ExecuteScalarAsync<int>(
+                    "SELECT sp_check_username_exists(@p_username)",
+                    new { p_username = user.Username });
 
                 if (userExists > 0)
                 {
@@ -82,8 +83,9 @@ namespace UserRolePortal.Controllers
                 }
 
                 // Check if email already exists using Dapper
-                string emailCheckSql = @"SELECT COUNT(1) FROM ""Users"" WHERE ""Email"" = @Email";
-                int emailExists = await connection.ExecuteScalarAsync<int>(emailCheckSql, new { Email = user.Email });
+                int emailExists = await connection.ExecuteScalarAsync<int>(
+                    "SELECT sp_check_email_exists(@p_email)",
+                    new { p_email = user.Email });
 
                 if (emailExists > 0)
                 {
@@ -99,11 +101,21 @@ namespace UserRolePortal.Controllers
                 user.DOB = user.DOB.ToUniversalTime(); // PostgreSQL requires all DateTime values to be in UTC
 
                 // Insert into database using Dapper
-                string insertSql = @"
-                    INSERT INTO ""Users"" (""FullName"", ""Username"", ""Password"", ""Email"", ""MobileNo"", ""DOB"", ""RoleId"", ""Gender"", ""CreatedDate"")
-                    VALUES (@FullName, @Username, @Password, @Email, @MobileNo, @DOB, @RoleId, @Gender, @CreatedDate)";
-
-                await connection.ExecuteAsync(insertSql, user);
+                await connection.ExecuteAsync(
+                    "SELECT sp_insert_user(@p_fullname, @p_username, @p_password, @p_email, @p_mobileno, @p_dob, @p_roleid, @p_gender, @p_createddate, @p_status, @p_statusreason)",
+                    new {
+                        p_fullname = user.FullName,
+                        p_username = user.Username,
+                        p_password = user.Password,
+                        p_email = user.Email,
+                        p_mobileno = user.MobileNo,
+                        p_dob = user.DOB,
+                        p_roleid = user.RoleId,
+                        p_gender = user.Gender,
+                        p_createddate = user.CreatedDate,
+                        p_status = user.RoleId == 3 ? 1 : 2, // Super Admin is verified immediately, others pending
+                        p_statusreason = (string?)null
+                    });
             }
 
             TempData["Success"] = "Registration successful! Proceed to login.";
@@ -155,15 +167,12 @@ namespace UserRolePortal.Controllers
                 return View();
             }
 
-            User user;
+            User? user;
             using (var connection = _dbFactory.CreateConnection())
             {
-                string sql = @"
-                    SELECT * 
-                    FROM ""Users"" 
-                    WHERE ""Username"" = @Username";
-                    
-                user = await connection.QueryFirstOrDefaultAsync<User>(sql, new { Username = username });
+                user = await connection.QueryFirstOrDefaultAsync<User>(
+                    "SELECT * FROM sp_get_user_by_username(@p_username)",
+                    new { p_username = username });
             }
 
             if (user == null)
@@ -185,8 +194,10 @@ namespace UserRolePortal.Controllers
             {
                 new Claim(ClaimTypes.Name, user.Username),
                 new Claim("FullName", user.FullName),
-                new Claim(ClaimTypes.Role, user.RoleId == 1 ? "Admin" : "User"),
-                new Claim("UserId", user.UserId.ToString())
+                new Claim(ClaimTypes.Role, user.RoleId == 3 ? "SuperAdmin" : (user.RoleId == 1 ? "Admin" : "User")),
+                new Claim("UserId", user.UserId.ToString()),
+                new Claim("Status", user.Status.ToString()),
+                new Claim("StatusReason", user.StatusReason ?? "")
             };
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);

@@ -1,204 +1,299 @@
 @model IEnumerable<UserRolePortal.Models.User>
 @{
     ViewData["Title"] = "User List";
+    int totalUsers = Model?.Count() ?? 0;
+    int adminCount = Model?.Count(u => u.RoleId == 1) ?? 0;
+    int userCount  = Model?.Count(u => u.RoleId == 2) ?? 0;
+    var latestUser = Model?.OrderByDescending(u => u.CreatedDate).FirstOrDefault();
+    string latestDate = latestUser?.CreatedDate?.ToString("dd MMM yyyy") ?? "N/A";
 }
 
-<div class="container-fluid mt-4">
-    <!-- Page Header -->
-    <div class="d-flex align-items-center justify-content-between mb-4">
-        <div>
-            <h1 class="h3 mb-1 fw-bold text-white">User Management</h1>
-            <p class="mb-0" style="color: rgba(255,255,255,0.6);">Manage all registered users</p>
-        </div>
-        <a asp-controller="Account" asp-action="Register"
-           class="btn px-4 py-2 shadow-sm" style="background: #ff4b00; color: #000; border: none; font-weight: 700;">
-            <i class="fa-solid fa-fw fa-user-plus" color = #000000></i>  Add New User
+<style>
+    /* ── Page Styles ─────────────────────────────────── */
+    .stat-pill {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 16px; border-radius: 50px; font-size: 13px; font-weight: 700;
+    }
+
+    /* table row hover */
+    #userTable tbody tr:hover { background: rgba(255,255,255,0.04) !important; }
+
+    /* sticky table header */
+    #userTable thead tr th { position: sticky; top: 0; z-index: 1; }
+
+    /* action buttons */
+    .act-btn {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 5px 11px; border-radius: 6px; font-size: 12px; font-weight: 700;
+        border: 1px solid; cursor: pointer; white-space: nowrap;
+        text-decoration: none; transition: opacity .15s, transform .1s;
+    }
+    .act-btn:hover  { opacity: .85; transform: translateY(-1px); }
+    .act-btn:active { transform: translateY(0); }
+    .act-btn.green  { background:rgba(40,199,111,0.12);  color:#28c76f; border-color:rgba(40,199,111,0.3);  }
+    .act-btn.red    { background:rgba(220,53,69,0.10);   color:#dc3545; border-color:rgba(220,53,69,0.3);   }
+    .act-btn.orange { background:rgba(255,91,0,0.12);    color:#ff5b00; border-color:rgba(255,91,0,0.3);    }
+    .act-btn.pink   { background:rgba(255,77,109,0.12);  color:#ff4d6d; border-color:rgba(255,77,109,0.3);  }
+    .act-btn.ghost  { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.75); border-color:rgba(255,255,255,0.15); }
+
+    /* toast */
+    #actionToast {
+        position: fixed; top: -80px; left: 50%; transform: translateX(-50%);
+        z-index: 9999; min-width: 300px; max-width: 500px;
+        padding: 13px 22px; border-radius: 10px; font-weight: 600; font-size: 14px;
+        display: flex; align-items: center; gap: 11px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        transition: top .45s cubic-bezier(.4,0,.2,1);
+        background: #1a1617; color: #fff; border-left: 5px solid #ff5b00;
+    }
+
+    /* column resize handle */
+    .col-resizer {
+        position: absolute; right: 0; top: 0; bottom: 0;
+        width: 5px; cursor: col-resize;
+        background: transparent;
+        z-index: 10;
+    }
+    .col-resizer:hover, .col-resizer.dragging { background: rgba(255,91,0,0.55); }
+
+    /* sortable header hover */
+    .resizable-th[data-sort]:hover { color: #fff !important; background: rgba(255,91,0,0.07); }
+    .resizable-th.sort-asc .sort-icon::after  { content: ' ↑'; opacity:1; }
+    .resizable-th.sort-desc .sort-icon::after { content: ' ↓'; opacity:1; }
+    .resizable-th.sort-asc .sort-icon,
+    .resizable-th.sort-desc .sort-icon { opacity: 1; color: #ff5b00; }
+</style>
+
+<!-- Toast -->
+<div id="actionToast">
+    <i id="toastIcon" class="fas fa-circle-notch fa-spin" style="font-size:17px;"></i>
+    <span id="toastMessage">Processing...</span>
+</div>
+
+<div class="container-fluid px-4 mt-4">
+
+    <!-- ── STAT PILLS & ACTIONS ────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+        <span class="stat-pill" style="background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.7);">
+            <i class="fas fa-users" style="color:#ff5b00;"></i> @totalUsers Total
+        </span>
+        <span class="stat-pill" style="background:rgba(40,199,111,0.06); color:#28c76f;">
+            <i class="fas fa-user-shield"></i> @adminCount Admins
+        </span>
+        <span class="stat-pill" style="background:rgba(255,193,7,0.06); color:#ffc107;">
+            <i class="fas fa-user"></i> @userCount Users
+        </span>
+        <span class="stat-pill me-auto" style="background:rgba(255,255,255,0.03); color:rgba(255,255,255,0.5);">
+            <i class="fas fa-clock" style="color:#ff5b00;"></i> Latest: @latestDate
+        </span>
+
+        <a asp-controller="Account" asp-action="Register" class="act-btn orange px-4 py-2" style="font-size:13px; border-radius:8px;">
+            <i class="fas fa-user-plus"></i> Add New User
         </a>
     </div>
 
-    @if (TempData["Success"] != null)
-    {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-    @if (TempData["Error"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>@TempData["Error"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-
-    <!-- Summary Bar -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body py-3 d-flex align-items-center">
-                    <div class="rounded-3 p-2 me-3" style="background: rgba(255, 75, 0, 0.15);">
-                        <i class="fas fa-users" style="color: #ff4b00;"></i>
-                    </div>
-                    <div>
-                        <small style="color: rgba(255,255,255,0.6);">Total Users</small>
-                        <h5 class="mb-0 fw-bold text-white">@Model.Count()</h5>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body py-3 d-flex align-items-center">
-                    <div class="rounded-3 p-2 me-3" style="background: rgba(255, 106, 42, 0.15);">
-                        <i class="fas fa-user-shield" style="color: #ff6a2a;"></i>
-                    </div>
-                    <div>
-                        <small style="color: rgba(255,255,255,0.6);">Admins</small>
-                        <h5 class="mb-0 fw-bold text-white">@Model.Count(u => u.RoleId == 1)</h5>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body py-3 d-flex align-items-center">
-                    <div class="rounded-3 p-2 me-3" style="background: rgba(255, 75, 0, 0.1);">
-                        <i class="fas fa-user" style="color: #ff4b00;"></i>
-                    </div>
-                    <div>
-                        <small style="color: rgba(255,255,255,0.6);">Regular Users</small>
-                        <h5 class="mb-0 fw-bold text-white">@Model.Count(u => u.RoleId == 2)</h5>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body py-3 d-flex align-items-center">
-                    <div class="rounded-3 p-2 me-3" style="background: rgba(255, 106, 42, 0.1);">
-                        <i class="fas fa-calendar-alt" style="color: #ff6a2a;"></i>
-                    </div>
-                    <div>
-                        <small style="color: rgba(255,255,255,0.6);">Latest Joined</small>
-                        <h5 class="mb-0 fw-bold text-white" style="font-size: 14px;">
-                            @{
-                                var latest = Model.OrderByDescending(u => u.CreatedDate).FirstOrDefault();
-                            }
-                            @(latest?.CreatedDate?.ToString("dd MMM") ?? "N/A")
-                        </h5>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Search Bar -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body py-3">
-            <div class="row align-items-center">
+    <!-- ── SEARCH BAR ────────────────────────────── -->
+    <div class="card border-0 shadow-sm mb-3" style="background:#1a1617;">
+        <div class="card-body py-2 px-3">
+            <div class="row align-items-center g-2">
                 <div class="col-md-6">
-                    <div class="input-group">
-                        <span class="input-group-text border-end-0" style="background: #1a1617; border-color: rgba(255,255,255,0.15); color: rgba(255,255,255,0.5);">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text border-0"
+                              style="background:#141112; color:rgba(255,255,255,0.4);">
                             <i class="fas fa-search"></i>
                         </span>
-                        <input type="text" id="searchInput" class="form-control border-start-0"
-                               placeholder="Search users by name, email, or username..."
-                               style="background: #1a1617; color: #fff; border-color: rgba(255,255,255,0.15);"
+                        <input type="text" id="searchInput" class="form-control border-0"
+                               placeholder="Search users by name, username, or email..."
+                               style="background:#141112; color:#fff;"
                                onkeyup="filterTable()">
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <select id="roleFilter" class="form-select custom-select" data-variant="dark" onchange="filterTable()"
-                            style="background: #1a1617; color: #fff; border-color: rgba(255,255,255,0.15);">
-                        <option value="">All Users</option>
-                        <option value="Admin">Admin</option>
-                        <option value="User">User</option>
+                    <select id="roleFilter" class="form-select form-select-sm border-0 custom-select" onchange="filterTable()"
+                            style="background:#141112; color:#fff;">
+                        <option value="">All Statuses</option>
+                        <option value="Verified">Verified</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Suspended">Suspended</option>
                     </select>
                 </div>
                 <div class="col-md-3 text-end">
-                    <span class="small" id="resultCount" style="color: rgba(255,255,255,0.6);">
-                        Showing <strong>@Model.Count()</strong> users
+                    <span id="resultCount" style="color:rgba(255,255,255,0.5); font-size:12px;">
+                        <strong style="color:#ff5b00;">@totalUsers</strong> users
                     </span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Users Table -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header py-3 d-flex align-items-center justify-content-between" style="background: #1a1617; border-bottom: 1px solid rgba(255,255,255,0.1);">
-            <h6 class="m-0 fw-bold text-white">
-                <i class="fas fa-table me-2" style="color: #ff5b00;"></i>Registered Users
-            </h6>
+    @if (User.IsInRole("SuperAdmin"))
+    {
+        <ul class="nav nav-tabs mb-0 border-0" id="roleTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active px-4 py-3 rounded-top" id="users-tab" type="button" role="tab" style="color:#ff5b00; background:#1a1617; border:none; font-weight:600;" onclick="filterByRoleType(2)">Users</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link px-4 py-3 rounded-top" id="admins-tab" type="button" role="tab" style="color:rgba(255,255,255,0.5); background:transparent; border:none; font-weight:600;" onclick="filterByRoleType(1)">Admins</button>
+            </li>
+        </ul>
+    }
+
+    <!-- ── USERS TABLE ─────────────────────────────── -->
+    <div class="card border-0 shadow-sm" style="background:#1a1617; @(User.IsInRole("SuperAdmin") ? "border-top-left-radius:0;" : "")">
+        <div class="card-header py-3 px-4 d-flex align-items-center justify-content-between"
+             style="background:#141112; border-bottom:1px solid rgba(255,91,0,0.2);">
+            
+            <div class="d-flex align-items-center gap-2" id="tableTitle">
+                <i class="fas fa-users" style="color:#ff5b00;"></i>
+                <h6 class="mb-0 fw-bold text-white">Registered Users</h6>
+            </div>
         </div>
+
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" id="userTable">
+            <div class="table-responsive" style="max-height:520px; overflow-y:auto;">
+                <table class="table mb-0" id="documentTable" style="border-collapse:separate; width:100%;">
                     <thead>
-                        <tr style="background: #1a1617; color: #ffffff; border-bottom: 2px solid #ff5b00;">
-                            <th class="py-3 px-4" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">#</th>
-                            <th class="py-3 px-3" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Full Name</th>
-                            <th class="py-3 px-3" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Username</th>
-                            <th class="py-3 px-3" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Email</th>
-                            <th class="py-3 px-3" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Mobile</th>
-                            <th class="py-3 px-3" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">DOB</th>
-                            <th class="py-3 px-3" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Role</th>
-                            <th class="py-3 px-3" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Joined</th>
-                            <th class="py-3 px-3 text-center" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Actions</th>
+                        <tr id="docTableHead" style="background:#141112; border-bottom:2px solid #ff5b00;">
+                            <th class="py-3 px-4 text-nowrap resizable-th" data-col="0" data-sort="number" style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; cursor:pointer; min-width:40px;">
+                                # <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span><div class="col-resizer"></div>
+                            </th>
+                            <th class="py-3 px-3 text-nowrap resizable-th" data-col="1" data-sort="text" style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; cursor:pointer; min-width:140px;">
+                                Full Name <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span><div class="col-resizer"></div>
+                            </th>
+                            <th class="py-3 px-3 text-nowrap resizable-th" data-col="2" data-sort="text" style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; cursor:pointer; min-width:100px;">
+                                Username <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span><div class="col-resizer"></div>
+                            </th>
+                            <th class="py-3 px-3 text-nowrap resizable-th" data-col="3" data-sort="text" style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; cursor:pointer; min-width:130px;">
+                                Email <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span><div class="col-resizer"></div>
+                            </th>
+                            <th class="py-3 px-3 text-nowrap resizable-th" data-col="4" data-sort="text" style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; cursor:pointer; min-width:100px;">
+                                Mobile <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span><div class="col-resizer"></div>
+                            </th>
+                            <th class="py-3 px-3 text-nowrap resizable-th" data-col="5" data-sort="date" style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; cursor:pointer; min-width:90px;">
+                                DOB <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span><div class="col-resizer"></div>
+                            </th>
+                            <th class="py-3 px-3 text-nowrap resizable-th" data-col="6" data-sort="status" style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; cursor:pointer; min-width:80px;">
+                                Status <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span><div class="col-resizer"></div>
+                            </th>
+                            <th class="py-3 px-3 text-nowrap resizable-th" data-col="7" data-sort="date" style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; cursor:pointer; min-width:90px;">
+                                Joined <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span><div class="col-resizer"></div>
+                            </th>
+                            <th class="py-3 px-4 text-nowrap text-end resizable-th" style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; min-width:100px;">
+                                Actions <div class="col-resizer"></div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
-                        @{ int rowIndex = 1; }
-                        @foreach (var user in Model)
+                        @if (Model != null && Model.Any())
                         {
-                            <tr data-role="@(user.RoleId == 1 ? "Admin" : "User")">
-                                <td class="px-4 fw-semibold" style="color: rgba(255,255,255,0.5);">@rowIndex</td>
-                                <td class="px-3">
-                                    <div class="d-flex align-items-center">
-                                        <div class="rounded-circle d-flex align-items-center justify-content-center me-2"
-                                             style="width: 32px; height: 32px; background: @(user.RoleId == 1 ? "rgba(255,75,0,0.15)" : "rgba(255,106,42,0.1)"); font-size: 13px; font-weight: 700; color: @(user.RoleId == 1 ? "#ff4b00" : "#ff6a2a");">
-                                            @user.FullName.Substring(0, 1).ToUpper()
+                            int rowIndex = 1;
+                            foreach (var user in Model)
+                            {
+                                string userStatus = user.Status == 1 ? "Verified" : (user.Status == 2 ? "Pending" : "Suspended");
+                                <tr data-role="@userStatus" data-roletype="@user.RoleId" style="border-bottom:1px solid rgba(255,255,255,0.05); transition:background .15s; @(user.RoleId == 1 ? "display:none;" : "")">
+                                    <td class="align-middle px-4" style="color:rgba(255,255,255,0.25); font-size:12px; font-weight:700;">@rowIndex</td>
+                                    
+                                    <td class="align-middle px-3">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                                 style="width:30px; height:30px; background:@(user.RoleId == 1 ? "rgba(40,199,111,0.12)" : "rgba(255,193,7,0.12)"); font-size:12px; font-weight:800; color:@(user.RoleId == 1 ? "#28c76f" : "#ffc107");">
+                                                @(user.FullName?.Substring(0, 1).ToUpper() ?? "?")
+                                            </div>
+                                            <span class="fw-semibold text-white" style="font-size:13px;">@user.FullName</span>
                                         </div>
-                                        <span class="fw-semibold text-white">@user.FullName</span>
+                                    </td>
+
+                                    <td class="align-middle px-3">
+                                        <span style="background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.8); border-radius:6px; padding:3px 8px; font-size:12px; font-family:monospace;">
+                                            @user.Username
+                                        </span>
+                                    </td>
+
+                                    <td class="align-middle px-3 text-white" style="font-size:13px; color:rgba(255,255,255,0.8);">
+                                        @user.Email
+                                    </td>
+
+                                    <td class="align-middle px-3 text-white" style="font-size:13px; color:rgba(255,255,255,0.8);">
+                                        @user.MobileNo
+                                    </td>
+
+                                    <td class="align-middle px-3" style="font-size:13px; color:rgba(255,255,255,0.8);">
+                                        @user.DOB.ToString("dd MMM yyyy")
+                                    </td>
+
+                                    <td class="align-middle px-3">
+                                        @if (user.Status == 1)
+                                        {
+                                            <span style="background:rgba(40,199,111,0.12); color:#28c76f; border:1px solid rgba(40,199,111,0.25); border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; white-space:nowrap;">
+                                                <i class="fas fa-check-circle me-1"></i>Verified
+                                            </span>
+                                        }
+                                        else if (user.Status == 2)
+                                        {
+                                            <span style="background:rgba(255,193,7,0.12); color:#ffc107; border:1px solid rgba(255,193,7,0.25); border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; white-space:nowrap;">
+                                                <i class="fas fa-clock me-1"></i>Pending
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span style="background:rgba(220,53,69,0.12); color:#dc3545; border:1px solid rgba(220,53,69,0.25); border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; white-space:nowrap;">
+                                                <i class="fas fa-ban me-1"></i>Suspended
+                                            </span>
+                                        }
+                                    </td>
+
+                                    <td class="align-middle px-3" style="font-size:13px; color:rgba(255,255,255,0.6);">
+                                        @(user.CreatedDate.HasValue ? user.CreatedDate.Value.ToString("dd MMM yyyy") : "—")
+                                    </td>
+
+                                    <td class="align-middle px-3" style="white-space:nowrap;">
+                                        <div class="d-flex justify-content-end align-items-center gap-1" style="flex-wrap:nowrap;">
+                                            @if (user.Status == 1)
+                                            {
+                                                <button class="act-btn ghost" title="Edit User"
+                                                        data-bs-toggle="modal" data-bs-target="#editModal"
+                                                        onclick="loadUserData(@user.UserId, '@Html.Raw(user.FullName?.Replace("'", "\\'"))', '@Html.Raw(user.Email?.Replace("'", "\\'"))', '@Html.Raw(user.MobileNo?.Replace("'", "\\'"))', @user.RoleId)">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="act-btn red" title="Suspend User"
+                                                        data-bs-toggle="modal" data-bs-target="#suspendModal"
+                                                        onclick="setStatusActionId(@user.UserId, '@Html.Raw(user.FullName?.Replace("'", "\\'"))', 3)">
+                                                    <i class="fas fa-ban"></i>
+                                                </button>
+                                            }
+                                            else if (user.Status == 2)
+                                            {
+                                                <a href="/Dashboard/UploadDocument?userId=@user.UserId" class="act-btn green" title="Verify Documents">
+                                                    <i class="fas fa-check-double"></i> Verify
+                                                </a>
+                                            }
+                                            else if (user.Status == 3)
+                                            {
+                                                <button class="act-btn green" title="Unsuspend User"
+                                                        data-bs-toggle="modal" data-bs-target="#unsuspendModal"
+                                                        onclick="setStatusActionId(@user.UserId, '@Html.Raw(user.FullName?.Replace("'", "\\'"))', 1)">
+                                                    <i class="fas fa-undo"></i> Unsuspend
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                                rowIndex++;
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center py-5">
+                                    <div class="d-inline-flex flex-column align-items-center gap-2">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center mb-2"
+                                             style="width:60px; height:60px; background:rgba(255,91,0,0.1);">
+                                            <i class="fas fa-users fa-xl" style="color:rgba(255,91,0,0.5);"></i>
+                                        </div>
+                                        <h6 class="text-white mb-1">No users found</h6>
                                     </div>
                                 </td>
-                                <td class="px-3"><code class="px-2 py-1 rounded" style="background: rgba(255,255,255,0.08); color: #ff6a2a;">@user.Username</code></td>
-                                <td class="px-3" style="color: rgba(255,255,255,0.6);">@user.Email</td>
-                                <td class="px-3">@user.MobileNo</td>
-                                <td class="px-3">@user.DOB.ToString("dd MMM yyyy")</td>
-                                <td class="px-3">
-                                    @if (user.RoleId == 1)
-                                    {
-                                        <span class="badge px-3 py-2 rounded-pill" style="background: rgba(255,75,0,0.15); color: #ff4b00;">
-                                            <i class="fas fa-shield-alt me-1"></i>Admin
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge px-3 py-2 rounded-pill" style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8);">
-                                            <i class="fas fa-user me-1"></i>User
-                                        </span>
-                                    }
-                                </td>
-                                <td class="px-3 small" style="color: rgba(255,255,255,0.5);">
-                                    @(user.CreatedDate.HasValue ? user.CreatedDate.Value.ToString("dd MMM yyyy") : "N/A")
-                                </td>
-                                <td class="px-9 text-center">
-                                    <button class="btn btn-sm me-1" title="Edit User"
-                                            style="border: 1px solid #ff4b00; color: #ff4b00;"
-                                            data-bs-toggle="modal" data-bs-target="#editModal"
-                                            onclick="loadUserData(@user.UserId, '@user.FullName', '@user.Email', '@user.MobileNo', @user.RoleId)">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-sm" title="Delete User"
-                                            style="border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.7);"
-                                            data-bs-toggle="modal" data-bs-target="#deleteModal"
-                                            onclick="setDeleteId(@user.UserId, '@user.FullName')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
                             </tr>
-                            rowIndex++;
                         }
                     </tbody>
                 </table>
@@ -207,67 +302,150 @@
     </div>
 </div>
 
-<!-- Edit Modal -->
+<!-- ═══════════════════ MODALS ═══════════════════ -->
+
+<!-- EDIT MODAL -->
 <div class="modal fade" id="editModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow" style="background: #120f10; color: #fff;">
-            <div class="modal-header border-0" style="background: #1a1617;">
-                <h5 class="modal-title fw-bold text-white"><i class="fas fa-edit me-2" style="color: #ff4b00;"></i>Edit User</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0" style="background:#120f10; box-shadow:0 24px 64px rgba(0,0,0,0.65);">
+            <div class="modal-header border-0 px-4 pt-4 pb-0">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center"
+                         style="width:44px; height:44px; background:rgba(255,91,0,0.15); border:1px solid rgba(255,91,0,0.3);">
+                        <i class="fas fa-user-edit" style="color:#ff5b00; font-size:17px;"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold text-white">Edit User</h5>
+                        <small style="color:rgba(255,255,255,0.35);">Update details and role</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
+            <div class="modal-body px-4 py-3">
                 <form id="editForm">
                     <input type="hidden" id="editUserId" name="UserId" />
                     <div class="mb-3">
-                        <label class="form-label fw-semibold text-white">Full Name</label>
-                        <input type="text" class="form-control" id="editFullName" name="FullName" required style="background: #1a1617; color: #fff; border-color: rgba(255,255,255,0.15);">
+                        <label class="form-label fw-semibold text-white mb-2" style="font-size:13px;">Full Name</label>
+                        <input type="text" class="form-control form-control-sm" id="editFullName" name="FullName" required style="background:#1a1617; color:#fff; border:1px solid rgba(255,255,255,0.15); padding:8px 12px;">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold text-white">Email</label>
-                        <input type="email" class="form-control" id="editEmail" name="Email" required style="background: #1a1617; color: #fff; border-color: rgba(255,255,255,0.15);">
+                        <label class="form-label fw-semibold text-white mb-2" style="font-size:13px;">Email</label>
+                        <input type="email" class="form-control form-control-sm" id="editEmail" name="Email" required style="background:#1a1617; color:#fff; border:1px solid rgba(255,255,255,0.15); padding:8px 12px;">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold text-white">Phone</label>
-                        <input type="text" class="form-control" id="editMobileNo" name="MobileNo" required style="background: #1a1617; color: #fff; border-color: rgba(255,255,255,0.15);">
+                        <label class="form-label fw-semibold text-white mb-2" style="font-size:13px;">Phone</label>
+                        <input type="text" class="form-control form-control-sm" id="editMobileNo" name="MobileNo" required style="background:#1a1617; color:#fff; border:1px solid rgba(255,255,255,0.15); padding:8px 12px;">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-white">Role</label>
-                        <select class="form-select custom-select" data-variant="dark" id="editRoleId" name="RoleId" style="background: #1a1617; color: #fff; border-color: rgba(255,255,255,0.15);">
-                            <option value="1">Admin</option>
-                            <option value="2">User</option>
-                        </select>
-                    </div>
+                    @if (User.IsInRole("SuperAdmin"))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-white mb-2" style="font-size:13px;">Role</label>
+                            <select class="form-select form-select-sm" id="editRoleId" name="RoleId" style="background:#1a1617; color:#fff; border:1px solid rgba(255,255,255,0.15); padding:8px 12px;">
+                                <option value="2">User</option>
+                                <option value="1">Admin</option>
+                            </select>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <input type="hidden" id="editRoleId" name="RoleId" value="2" />
+                        </div>
+                    }
                 </form>
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn px-4" style="background: rgba(255,255,255,0.1); color: #fff; border: none;" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn px-4" style="background: #ff4b00; color: #000; border: none; font-weight: 700;" onclick="submitEdit()">
-                    <i class="fas fa-save me-1"></i>Save Changes
+            <div class="modal-footer border-0 px-4 pb-4 gap-2">
+                <button type="button" class="act-btn ghost px-4 py-2" data-bs-dismiss="modal" style="border-radius:8px; font-size:13px;">
+                    <i class="fas fa-arrow-left"></i> Cancel
+                </button>
+                <button type="button" class="act-btn orange px-4 py-2" onclick="submitEdit()" style="border-radius:8px; font-size:13px; background:#ff5b00; color:#fff;">
+                    <i class="fas fa-save"></i> Save Changes
                 </button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Delete Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow" style="background: #120f10; color: #fff;">
-            <div class="modal-header border-0" style="background: #1a1617;">
-                <h5 class="modal-title fw-bold text-white"><i class="fas fa-exclamation-triangle me-2" style="color: #ff4b00;"></i>Delete User</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+<!-- SUSPEND MODAL -->
+<div class="modal fade" id="suspendModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0" style="background:#120f10; box-shadow:0 24px 64px rgba(0,0,0,0.65);">
+            <div class="modal-header border-0 px-4 pt-4 pb-0">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center"
+                         style="width:44px; height:44px; background:rgba(220,53,69,0.15); border:1px solid rgba(220,53,69,0.3);">
+                        <i class="fas fa-ban" style="color:#dc3545; font-size:17px;"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold text-white">Suspend User</h5>
+                        <small style="color:rgba(255,255,255,0.35);">Reason is required</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body text-center py-4">
-                <i class="fas fa-trash-alt fa-3x mb-3" style="color: #ff4b00;"></i>
-                <p class="mb-1 fw-semibold text-white">Are you sure you want to delete</p>
-                <p class="fw-bold" style="color: #ff4b00;" id="deleteUserName"></p>
-                <input type="hidden" id="deleteUserId" />
-                <small style="color: rgba(255,255,255,0.5);">This action cannot be undone.</small>
+            <div class="modal-body px-4 py-3">
+                <div class="rounded-3 p-3 mb-3" style="background:rgba(220,53,69,0.07); border:1px solid rgba(220,53,69,0.18);">
+                    <p class="mb-1 text-white" style="font-size:13px;">You are suspending:</p>
+                    <p class="mb-0 fw-bold" style="color:#dc3545; font-size:14px;">
+                        <i class="fas fa-user me-2"></i><span id="suspendUserName"></span>
+                    </p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-white mb-2" style="font-size:13px;">Reason for Suspension</label>
+                    <textarea class="form-control form-control-sm" id="suspendReason" required style="background:#1a1617; color:#fff; border:1px solid rgba(255,255,255,0.15); padding:8px 12px;" rows="3"></textarea>
+                </div>
+                <input type="hidden" id="suspendUserId" />
+                <input type="hidden" id="suspendActionStatus" value="3" />
             </div>
-            <div class="modal-footer border-0 justify-content-center">
-                <button type="button" class="btn px-4" style="background: rgba(255,255,255,0.1); color: #fff; border: none;" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn px-4" style="background: #ff4b00; color: #000; border: none; font-weight: 700;" onclick="submitDelete()">
-                    <i class="fas fa-trash me-1"></i>Delete
+            <div class="modal-footer border-0 px-4 pb-4 gap-2">
+                <button type="button" class="act-btn ghost px-4 py-2" data-bs-dismiss="modal" style="border-radius:8px; font-size:13px;">
+                    <i class="fas fa-arrow-left"></i> Cancel
+                </button>
+                <button type="button" class="act-btn red px-4 py-2" onclick="submitStatusChangeFromModal('suspend')" style="border-radius:8px; font-size:13px; background:#dc3545; color:#fff;">
+                    <i class="fas fa-ban"></i> Suspend User
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- UNSUSPEND MODAL -->
+<div class="modal fade" id="unsuspendModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0" style="background:#120f10; box-shadow:0 24px 64px rgba(0,0,0,0.65);">
+            <div class="modal-header border-0 px-4 pt-4 pb-0">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center"
+                         style="width:44px; height:44px; background:rgba(40,199,111,0.15); border:1px solid rgba(40,199,111,0.3);">
+                        <i class="fas fa-undo" style="color:#28c76f; font-size:17px;"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold text-white">Unsuspend User</h5>
+                        <small style="color:rgba(255,255,255,0.35);">Reason is required</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <div class="rounded-3 p-3 mb-3" style="background:rgba(40,199,111,0.07); border:1px solid rgba(40,199,111,0.18);">
+                    <p class="mb-1 text-white" style="font-size:13px;">You are unsuspending:</p>
+                    <p class="mb-0 fw-bold" style="color:#28c76f; font-size:14px;">
+                        <i class="fas fa-user me-2"></i><span id="unsuspendUserName"></span>
+                    </p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-white mb-2" style="font-size:13px;">Reason for Unsuspension</label>
+                    <textarea class="form-control form-control-sm" id="unsuspendReason" required style="background:#1a1617; color:#fff; border:1px solid rgba(255,255,255,0.15); padding:8px 12px;" rows="3"></textarea>
+                </div>
+                <input type="hidden" id="unsuspendUserId" />
+                <input type="hidden" id="unsuspendActionStatus" value="1" />
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 gap-2">
+                <button type="button" class="act-btn ghost px-4 py-2" data-bs-dismiss="modal" style="border-radius:8px; font-size:13px;">
+                    <i class="fas fa-arrow-left"></i> Cancel
+                </button>
+                <button type="button" class="act-btn green px-4 py-2" onclick="submitStatusChangeFromModal('unsuspend')" style="border-radius:8px; font-size:13px; background:#28c76f; color:#fff;">
+                    <i class="fas fa-undo"></i> Unsuspend User
                 </button>
             </div>
         </div>
@@ -276,20 +454,63 @@
 
 @section Scripts {
     <script>
-        // Search & Filter functionality
+        // ── Toast ────────────────────────────────
+        function showToast(msg, type) {
+            const t = document.getElementById('actionToast');
+            const i = document.getElementById('toastIcon');
+            const s = document.getElementById('toastMessage');
+            const map = {
+                success: { color:'#28c76f', cls:'fas fa-check-circle' },
+                error:   { color:'#dc3545', cls:'fas fa-times-circle' },
+                info:    { color:'#ff5b00', cls:'fas fa-circle-notch fa-spin' }
+            };
+            const m = map[type] || map.info;
+            t.style.borderLeftColor = m.color;
+            i.className = m.cls; i.style.color = m.color;
+            s.textContent = msg;
+            t.style.top = '22px';
+            setTimeout(() => t.style.top = '-80px', 3500);
+        }
+
+        // ── Search & Filter ──────────────────────
+        window.currentRoleTypeFilter = 2; // Default to Users
+        
+        function filterByRoleType(type) {
+            window.currentRoleTypeFilter = type;
+            if (type === 2) {
+                document.getElementById('users-tab').style.color = '#ff5b00';
+                document.getElementById('users-tab').style.background = '#1a1617';
+                document.getElementById('admins-tab').style.color = 'rgba(255,255,255,0.5)';
+                document.getElementById('admins-tab').style.background = 'transparent';
+                document.getElementById('tableTitle').innerHTML = '<i class="fas fa-users" style="color:#ff5b00;"></i><h6 class="mb-0 fw-bold text-white">Registered Users</h6>';
+            } else {
+                document.getElementById('admins-tab').style.color = '#ff5b00';
+                document.getElementById('admins-tab').style.background = '#1a1617';
+                document.getElementById('users-tab').style.color = 'rgba(255,255,255,0.5)';
+                document.getElementById('users-tab').style.background = 'transparent';
+                document.getElementById('tableTitle').innerHTML = '<i class="fas fa-user-shield" style="color:#ff5b00;"></i><h6 class="mb-0 fw-bold text-white">Registered Admins</h6>';
+            }
+            filterTable();
+        }
+
         function filterTable() {
-            var searchText = document.getElementById('searchInput').value.toLowerCase();
-            var roleFilter = document.getElementById('roleFilter').value;
-            var rows = document.querySelectorAll('#userTable tbody tr');
+            var searchText = (document.getElementById('searchInput')?.value || '').toLowerCase();
+            var roleFilter = document.getElementById('roleFilter')?.value || '';
+            var rows = document.querySelectorAll('#documentTable tbody tr');
             var visibleCount = 0;
+            var activeRoleTypeFilter = window.currentRoleTypeFilter || 2;
 
             rows.forEach(function(row) {
+                if (row.cells.length < 3) return;
                 var text = row.textContent.toLowerCase();
                 var role = row.getAttribute('data-role');
+                var roleType = parseInt(row.getAttribute('data-roletype'));
+
                 var matchesSearch = text.includes(searchText);
                 var matchesRole = !roleFilter || role === roleFilter;
+                var matchesRoleType = (roleType === activeRoleTypeFilter);
 
-                if (matchesSearch && matchesRole) {
+                if (matchesSearch && matchesRole && matchesRoleType) {
                     row.style.display = '';
                     visibleCount++;
                 } else {
@@ -297,33 +518,22 @@
                 }
             });
 
-            document.getElementById('resultCount').innerHTML =
-                'Showing <strong>' + visibleCount + '</strong> of <strong>@Model.Count()</strong> users';
+            const rc = document.getElementById('resultCount');
+            if (rc) {
+                rc.innerHTML = `<strong style="color:#ff5b00;">${visibleCount}</strong> users`;
+            }
         }
 
-        // Load user data into edit modal
+        // ── Load & Submit Data ───────────────────
         function loadUserData(id, fullName, email, mobile, roleId) {
             document.getElementById('editUserId').value = id;
             document.getElementById('editFullName').value = fullName;
             document.getElementById('editEmail').value = email;
             document.getElementById('editMobileNo').value = mobile;
-            document.getElementById('editRoleId').value = roleId;
-
-            // Update custom dropdown display
-            var editSelect = document.getElementById('editRoleId');
-            var customWrapper = editSelect.nextElementSibling;
-            if (customWrapper && customWrapper._updateDisplay) {
-                customWrapper._updateDisplay();
-            }
+            document.getElementById('editRoleId').value = roleId || 2;
         }
 
-        // Set delete target
-        function setDeleteId(id, name) {
-            document.getElementById('deleteUserId').value = id;
-            document.getElementById('deleteUserName').textContent = name;
-        }
 
-        // Submit edit form
         function submitEdit() {
             var formData = {
                 UserId: document.getElementById('editUserId').value,
@@ -332,6 +542,8 @@
                 MobileNo: document.getElementById('editMobileNo').value,
                 RoleId: document.getElementById('editRoleId').value
             };
+            bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+            showToast('Updating user details...', 'info');
 
             fetch('/Dashboard/UpdateUser', {
                 method: 'POST',
@@ -341,31 +553,178 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    location.reload();
+                    showToast('User updated successfully!', 'success');
+                    setTimeout(() => location.reload(), 1200);
                 } else {
-                    alert(data.message || 'Failed to update user.');
+                    showToast(data.message || 'Failed to update user.', 'error');
                 }
             })
-            .catch(() => alert('Error updating user. Please try again.'));
+            .catch(() => showToast('Error updating user. Please try again.', 'error'));
         }
 
-        // Submit delete
-        function submitDelete() {
-            var id = document.getElementById('deleteUserId').value;
+        function setStatusActionId(id, name, status) {
+            if (status === 3) {
+                document.getElementById('suspendUserId').value = id;
+                document.getElementById('suspendUserName').textContent = name;
+                document.getElementById('suspendReason').value = '';
+            } else if (status === 1) {
+                document.getElementById('unsuspendUserId').value = id;
+                document.getElementById('unsuspendUserName').textContent = name;
+                document.getElementById('unsuspendReason').value = '';
+            }
+        }
 
-            fetch('/Dashboard/DeleteUser/' + id, {
+        function submitStatusChangeFromModal(action) {
+            let id = document.getElementById(action + 'UserId').value;
+            let status = document.getElementById(action + 'ActionStatus').value;
+            let reason = document.getElementById(action + 'Reason').value;
+
+            if (!reason) {
+                showToast('Reason is required.', 'error');
+                return;
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById(action + 'Modal')).hide();
+            submitStatusChange(id, status, reason);
+        }
+
+        function submitStatusChange(id, status, reason) {
+            showToast('Updating status...', 'info');
+
+            var formData = new URLSearchParams();
+            formData.append('userId', id);
+            formData.append('newStatus', status);
+            formData.append('reason', reason);
+
+            fetch('/Dashboard/UpdateUserStatus', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    location.reload();
+                    showToast(data.message, 'success');
+                    setTimeout(() => location.reload(), 1200);
                 } else {
-                    alert(data.message || 'Failed to delete user.');
+                    showToast(data.message || 'Failed to update user status.', 'error');
                 }
             })
-            .catch(() => alert('Error deleting user. Please try again.'));
+            .catch(() => showToast('Error updating status. Please try again.', 'error'));
+        }
+
+
+
+        // ── Init + Resize + Sort ─────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('[data-bs-toggle="tooltip"], .act-btn[title]').forEach(el => new bootstrap.Tooltip(el, { trigger: 'hover' }));
+            makeColumnsResizable();
+            attachSortListeners();
+        });
+
+        function makeColumnsResizable() {
+            const table    = document.getElementById('documentTable');
+            const handles  = table.querySelectorAll('.col-resizer');
+
+            handles.forEach(handle => {
+                const th = handle.parentElement;
+                let startX, startW;
+
+                handle.addEventListener('mousedown', e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    startX = e.pageX;
+                    startW = th.offsetWidth;
+                    handle.classList.add('dragging');
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+
+                    function onMove(e) {
+                        const newW = Math.max(40, startW + (e.pageX - startX));
+                        th.style.width = newW + 'px';
+                        th.style.minWidth = newW + 'px';
+                    }
+                    function onUp() {
+                        handle.classList.remove('dragging');
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+                        document.removeEventListener('mousemove', onMove);
+                        document.removeEventListener('mouseup', onUp);
+                    }
+                    document.addEventListener('mousemove', onMove);
+                    document.addEventListener('mouseup', onUp);
+                });
+            });
+        }
+
+        let _sortCol = -1;
+        let _sortAsc = true;
+        const STATUS_ORDER = { 'Admin': 1, 'User': 2 };
+
+        function attachSortListeners() {
+            const ths = document.querySelectorAll('#docTableHead th[data-sort]');
+            ths.forEach(th => {
+                th.addEventListener('click', e => {
+                    if (e.target.classList.contains('col-resizer')) return;
+                    const col     = parseInt(th.getAttribute('data-col'));
+                    const sortType = th.getAttribute('data-sort');
+                    if (_sortCol === col) { _sortAsc = !_sortAsc; } 
+                    else { _sortCol = col; _sortAsc = true; }
+                    updateSortIcons(th);
+                    sortTable(col, sortType, _sortAsc);
+                });
+            });
+        }
+
+        function updateSortIcons(activeTh) {
+            document.querySelectorAll('#docTableHead th[data-sort]').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                const icon = th.querySelector('.sort-icon');
+                if (icon) { icon.textContent = '⇅'; icon.style.opacity = '.4'; icon.style.color = ''; }
+            });
+            const icon = activeTh.querySelector('.sort-icon');
+            if (_sortAsc) {
+                activeTh.classList.add('sort-asc');
+                if (icon) { icon.textContent = '↑'; icon.style.opacity = '1'; icon.style.color = '#ff5b00'; }
+            } else {
+                activeTh.classList.add('sort-desc');
+                if (icon) { icon.textContent = '↓'; icon.style.opacity = '1'; icon.style.color = '#ff5b00'; }
+            }
+        }
+
+        function sortTable(colIndex, sortType, asc) {
+            const tbody = document.querySelector('#documentTable tbody');
+            const rows  = Array.from(tbody.querySelectorAll('tr')).filter(r => r.cells.length > 2);
+
+            rows.sort((a, b) => {
+                const cellA = a.cells[colIndex];
+                const cellB = b.cells[colIndex];
+                if (!cellA || !cellB) return 0;
+
+                let valA = cellA.innerText.trim();
+                let valB = cellB.innerText.trim();
+
+                if (sortType === 'number') {
+                    return asc ? (parseFloat(valA)||0) - (parseFloat(valB)||0)
+                               : (parseFloat(valB)||0) - (parseFloat(valA)||0);
+                }
+                if (sortType === 'date') {
+                    const dA = new Date(valA.split('\n')[0]);
+                    const dB = new Date(valB.split('\n')[0]);
+                    return asc ? dA - dB : dB - dA;
+                }
+                if (sortType === 'status') {
+                    const sA = STATUS_ORDER[valA.trim()] || 99;
+                    const sB = STATUS_ORDER[valB.trim()] || 99;
+                    return asc ? sA - sB : sB - sA;
+                }
+                return asc
+                    ? valA.toLowerCase().localeCompare(valB.toLowerCase())
+                    : valB.toLowerCase().localeCompare(valA.toLowerCase());
+            });
+
+            rows.forEach(r => tbody.appendChild(r));
+            rows.forEach((r, i) => { if (r.cells[0]) r.cells[0].textContent = i + 1; });
         }
     </script>
 }

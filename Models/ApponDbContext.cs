@@ -22,6 +22,9 @@ namespace UserRolePortal.Models
         // Documents table
         public DbSet<Document> Documents { get; set; }
 
+        // UserStatusHistories table
+        public DbSet<UserStatusHistory> UserStatusHistories { get; set; }
+
         // OnModelCreating - runs when database model is created
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

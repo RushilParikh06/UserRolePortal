@@ -2,10 +2,17 @@ using Microsoft.EntityFrameworkCore;
 using UserRolePortal.Models;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    WebRootPath = "wwwroot"
+});
 
 // Add MVC Controllers and Views
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add<UserRolePortal.Filters.ActivityLogFilter>();
+});
 
 // Add IHttpContextAccessor for accessing HttpContext in views
 builder.Services.AddHttpContextAccessor();
@@ -26,7 +33,6 @@ builder.Services.AddSession(options =>
 });
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
 
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -45,6 +51,12 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddSingleton<UserRolePortal.Data.DbConnectionFactory>(); //dapper
 
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    // Set the max multipart body length to 2MB globally
+    options.MultipartBodyLengthLimit = 2 * 1024 * 1024;
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -61,7 +73,6 @@ else
 }
 
 app.UseStaticFiles();
-app.MapStaticAssets();
 app.UseRouting();
 app.UseSession();
 
@@ -70,7 +81,6 @@ app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();

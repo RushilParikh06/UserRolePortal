@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("UserRolePortal")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+00062b8cd663deaea52ae79d1de36771d4a6a4fd")]
 [assembly: System.Reflection.AssemblyProductAttribute("UserRolePortal")]
 [assembly: System.Reflection.AssemblyTitleAttribute("UserRolePortal")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

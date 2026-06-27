@@ -76,6 +76,7 @@
                 <label for="regRole">Role</label>
                 <select id="regRole" name="RoleId" required class="custom-select" data-variant="light">
                     <option value="">Select Role...</option>
+                    <option value="3">Super Admin</option>
                     <option value="1">Admin</option>
                     <option value="2">User</option>
                 </select>
@@ -165,14 +166,7 @@
                 }
             }
 
-            // Execute reCAPTCHA if validation passes
-            e.preventDefault();
-            grecaptcha.ready(function() {
-                grecaptcha.execute('@siteKey', {action: 'submit'}).then(function(token) {
-                    document.getElementById('g-recaptcha-response').value = token;
-                    document.getElementById('registerForm').submit();
-                });
-            });
+            // Form validation passed, allow native submission.
         });
     </script>
 }

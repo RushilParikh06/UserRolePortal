@@ -28,12 +28,12 @@
                 <i class="fas fa-bars top-button"></i>
                 <a class="nav-link @(ViewData["Title"]?.ToString() == "Dashboard" ? "active" : "")"
                    asp-controller="Dashboard" asp-action="Index">
-                   @if(User.IsInRole("Admin")) {<i class="fa-solid fa-fw fa-user-gear fa-xl"></i>}
+                   @if(User.IsInRole("Admin") || User.IsInRole("SuperAdmin")) {<i class="fa-solid fa-fw fa-user-gear fa-xl"></i>}
                    else {<i class="fa-solid fa-user fa-xl"></i>}
                     <span class="link-text">Dashboard</span>
                 </a>
 
-                @if (User.IsInRole("Admin"))
+                @if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
                 {
                     <a class="nav-link @(ViewData["Title"]?.ToString() == "User List" ? "active" : "")"
                        asp-controller="Dashboard" asp-action="UserList">
@@ -43,10 +43,10 @@
                 }
 
 
-                <a class="nav-link @(ViewData["Title"]?.ToString() == "Upload Document" ? "active" : "")"
+                <a class="nav-link @(ViewData["Title"]?.ToString() == "Documents" ? "active" : "")"
                    asp-controller="Dashboard" asp-action="UploadDocument">
                    <i class="fa-solid fa-file-arrow-up fa-xl"></i>
-                    <span class="link-text">Upload Documents</span>
+                    <span class="link-text">Documents</span>
                 </a>
 
                 <hr class="sidebar-divider" />
@@ -58,7 +58,14 @@
             <!-- Top Bar -->
             <header id="topbar">
                 <div class="d-flex align-items-center gap-3">
-                    @if(User.IsInRole("Admin"))
+                    @if(User.IsInRole("SuperAdmin"))
+                    {
+                        <span class="d-flex align-items-center gap-2" style="color: #ff5b00; font-size: 13px; font-weight: 700;">
+                            <i class="fas fa-crown"></i> Super Admin
+                        </span>
+                        <span style="color: rgba(255,255,255,0.15);">|</span>
+                    }
+                    else if(User.IsInRole("Admin"))
                     {
                         <span class="d-flex align-items-center gap-2" style="color: #ff5b00; font-size: 13px; font-weight: 700;">
                             <i class="fas fa-shield-alt"></i> Admin

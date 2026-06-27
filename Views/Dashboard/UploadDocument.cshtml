@@ -1,17 +1,112 @@
 @model List<UserRolePortal.Models.Document>
 @{
-    ViewData["Title"] = "Upload Document";
+    ViewData["Title"] = "Documents";
+    int totalDocs     = Model?.Count ?? 0;
+    int pendingCount  = Model?.Count(d => d.StatusId == 1) ?? 0;
+    int verifiedCount = Model?.Count(d => d.StatusId == 2) ?? 0;
+    int rejectedCount = Model?.Count(d => d.StatusId == 3) ?? 0;
 }
 
-<div class="container-fluid mt-4 px-4">
-    <!-- Upload Form Card -->
+<style>
+    /* ── Page Styles ─────────────────────────────────── */
+    .doc-upload-zone {
+        border: 2px dashed rgba(255,91,0,0.35);
+        border-radius: 12px;
+        padding: 18px 20px;
+        background: rgba(255,91,0,0.04);
+        transition: border-color .2s, background .2s;
+        cursor: pointer;
+    }
+    .doc-upload-zone:hover { border-color: #ff5b00; background: rgba(255,91,0,0.08); }
+    .doc-upload-zone input[type=file] { cursor: pointer; }
+
+    /* stat cards */
+    .stat-pill {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 16px; border-radius: 50px; font-size: 13px; font-weight: 700;
+    }
+
+    /* table row status stripes */
+    #documentTable tbody tr[data-status="Rejected"] { background: rgba(220,53,69,0.04); }
+    #documentTable tbody tr[data-status="Verified"]  { background: rgba(40,199,111,0.03); }
+    #documentTable tbody tr:hover { background: rgba(255,255,255,0.04) !important; }
+
+    /* sticky table header */
+    #documentTable thead tr th { position: sticky; top: 0; z-index: 1; }
+
+    /* action buttons */
+    .act-btn {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 5px 11px; border-radius: 6px; font-size: 12px; font-weight: 700;
+        border: 1px solid; cursor: pointer; white-space: nowrap;
+        text-decoration: none; transition: opacity .15s, transform .1s;
+    }
+    .act-btn:hover  { opacity: .85; transform: translateY(-1px); }
+    .act-btn:active { transform: translateY(0); }
+    .act-btn.green  { background:rgba(40,199,111,0.12);  color:#28c76f; border-color:rgba(40,199,111,0.3);  }
+    .act-btn.red    { background:rgba(220,53,69,0.10);   color:#dc3545; border-color:rgba(220,53,69,0.3);   }
+    .act-btn.orange { background:rgba(255,91,0,0.12);    color:#ff5b00; border-color:rgba(255,91,0,0.3);    }
+    .act-btn.pink   { background:rgba(255,77,109,0.12);  color:#ff4d6d; border-color:rgba(255,77,109,0.3);  }
+    .act-btn.ghost  { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.75); border-color:rgba(255,255,255,0.15); }
+
+    /* reason cell */
+    .reason-cell {
+        font-size: 12px; color: #ff4d6d; line-height: 1.5;
+        word-break: break-word; white-space: normal;
+        max-width: 210px;
+    }
+
+    /* toast */
+    #actionToast {
+        position: fixed; top: -80px; left: 50%; transform: translateX(-50%);
+        z-index: 9999; min-width: 300px; max-width: 500px;
+        padding: 13px 22px; border-radius: 10px; font-weight: 600; font-size: 14px;
+        display: flex; align-items: center; gap: 11px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        transition: top .45s cubic-bezier(.4,0,.2,1);
+        background: #1a1617; color: #fff; border-left: 5px solid #ff5b00;
+    }
+
+    /* column resize handle */
+    .col-resizer {
+        position: absolute; right: 0; top: 0; bottom: 0;
+        width: 5px; cursor: col-resize;
+        background: transparent;
+        z-index: 10;
+    }
+    .col-resizer:hover, .col-resizer.dragging {
+        background: rgba(255,91,0,0.55);
+    }
+
+    /* sortable header hover */
+    .resizable-th[data-sort]:hover {
+        color: #fff !important;
+        background: rgba(255,91,0,0.07);
+    }
+    .resizable-th.sort-asc .sort-icon::after  { content: ' ↑'; opacity:1; }
+    .resizable-th.sort-desc .sort-icon::after { content: ' ↓'; opacity:1; }
+    .resizable-th.sort-asc .sort-icon,
+    .resizable-th.sort-desc .sort-icon { opacity: 1; color: #ff5b00; }
+</style>
+
+<!-- Toast -->
+<div id="actionToast">
+    <i id="toastIcon" class="fas fa-circle-notch fa-spin" style="font-size:17px;"></i>
+    <span id="toastMessage">Processing...</span>
+</div>
+
+<div class="container-fluid px-4 mt-4">
+
+    @if (!User.IsInRole("SuperAdmin"))
+    {
+    <!-- ── UPLOAD FORM ─────────────────────────────── -->
     <div class="card shadow-sm mb-5 border-0">
         <div class="card-header bg-dark text-white border-0 py-3">
-            <h5 class="mb-0 fw-bold"><i class="fa-solid fa-file-arrow-up me-2"></i> Upload a New Document</h5>
+            <h5 class="mb-0 fw-bold">
+                <i class="fa-solid fa-file-arrow-up me-2" style="color:#ff5b00;"></i> Upload a New Document
+            </h5>
         </div>
         <div class="card-body p-4">
-            
-            <!-- Success/Error Messages -->
             @if (TempData["Success"] != null)
             {
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -27,7 +122,6 @@
                 </div>
             }
 
-            <!-- IMPORTANT: enctype="multipart/form-data" is absolutely required for file uploads! -->
             <form asp-action="UploadDocument" method="post" enctype="multipart/form-data">
                 <div class="row align-items-end g-3">
                     <div class="col-md-4">
@@ -39,267 +133,820 @@
                         <input type="file" name="panFile" class="form-control bg-light" required />
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-bold">Other Documents (Optional)</label>
+                        <label class="form-label fw-bold">Other Documents <span class="text-muted fw-normal">(Optional)</span></label>
                         <input type="file" name="optionalFiles" class="form-control bg-light" multiple />
                     </div>
                 </div>
                 <div class="mt-4 text-end">
-                    <button type="submit" class="btn text-white fw-bold px-5 py-2" style="background-color: #ff5b00;">
+                    <button type="submit" class="btn text-white fw-bold px-5 py-2" style="background-color:#ff5b00;">
                         <i class="fas fa-upload me-2"></i> Upload Documents
                     </button>
                 </div>
             </form>
         </div>
     </div>
-</div>
+    }
 
-<!-- search bar & Uploaded Documents Table -->
-@if (User.IsInRole("Admin"))
-{
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body py-3">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <div class="input-group">
-                        <span class="input-group-text border-end-0" style="background: #1a1617; border-color: rgba(255,255,255,0.15); color: rgba(255,255,255,0.5);">
-                            <i class="fas fa-search"></i>
-                        </span>
-                        <input type="text" id="searchInput" class="form-control border-start-0"
-                                placeholder="Search documents by file name or uploader..."
-                                style="background: #1a1617; color: #fff; border-color: rgba(255,255,255,0.15);"
-                                onkeyup="filterTable()">
+    <!-- ── STAT PILLS (Admin only) ─────────────────── -->
+    @if (ViewBag.IsAdminReviewMode == true)
+    {
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <span class="stat-pill" style="background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.7);">
+                <i class="fas fa-layer-group" style="color:#ff5b00;"></i> @totalDocs Total
+            </span>
+            <span class="stat-pill" style="background:rgba(255,193,7,0.1); color:#ffc107;">
+                <i class="fas fa-hourglass-half"></i> @pendingCount Pending
+            </span>
+            <span class="stat-pill" style="background:rgba(40,199,111,0.1); color:#28c76f;">
+                <i class="fas fa-shield-alt"></i> @verifiedCount Verified
+            </span>
+            <span class="stat-pill" style="background:rgba(220,53,69,0.1); color:#ff4d6d;">
+                <i class="fas fa-ban"></i> @rejectedCount Rejected
+            </span>
+        </div>
+    }
+
+    <!-- ── SEARCH BAR (Admin only) ────────────────── -->
+    @if (ViewBag.IsAdminReviewMode == true)
+    {
+        <div class="card border-0 shadow-sm mb-3" style="background:#1a1617;">
+            <div class="card-body py-2 px-3">
+                <div class="row align-items-center g-2">
+                    <div class="col-md-6">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text border-0"
+                                  style="background:#141112; color:rgba(255,255,255,0.4);">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" id="searchInput" class="form-control border-0"
+                                   placeholder="Search by file name, uploader, or type..."
+                                   style="background:#141112; color:#fff;"
+                                   onkeyup="filterTable()">
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <select id="statusFilter" class="form-select custom-select" data-variant="dark" onchange="filterTable()"
-                            style="background: #1a1617; color: #fff; border-color: rgba(255,255,255,0.15);">
-                        <option value="">All Documents</option>
-                        <option value="Verified">Verified</option>
-                        <option value="Pending">Pending</option>
-                    </select>
-                </div>
-                <div class="col-md-3 text-end">
-                    <span class="small" id="resultCount" style="color: rgba(255,255,255,0.6);">
-                        Showing <strong>@(Model?.Count ?? 0)</strong> documents
-                    </span>
+                    <div class="col-md-3">
+                        <select id="statusFilter" class="form-select form-select-sm border-0 custom-select" onchange="filterTable()"
+                                style="background:#141112; color:#fff;">
+                            <option value="">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Verified">Verified</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <span id="resultCount" style="color:rgba(255,255,255,0.5); font-size:12px;">
+                            <strong style="color:#ff5b00;">@totalDocs</strong> documents
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-}
+    }
 
-    <h5 class="fw-bold mb-3 px-1"></h5>
-    <div class="card shadow-sm border-0"> 
-        <div class="card-header py-3 d-flex align-items-center justify-content-between" style="background: #1a1617; border-bottom: 1px solid rgba(255,255,255,0.1);">
-            <h6 class="m-0 fw-bold text-white">
-                <i class="fas fa-regular fa-copy me-2" style="color: #ff5b00;"></i>Recently Uploaded Documents
-            </h6>
+    @if (User.IsInRole("SuperAdmin"))
+    {
+        <ul class="nav nav-tabs mb-0 border-0" id="roleTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active px-4 py-3 rounded-top" id="users-tab" type="button" role="tab" style="color:#ff5b00; background:#1a1617; border:none; font-weight:600;" onclick="filterByRoleType(2)">Users</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link px-4 py-3 rounded-top" id="admins-tab" type="button" role="tab" style="color:rgba(255,255,255,0.5); background:transparent; border:none; font-weight:600;" onclick="filterByRoleType(1)">Admins</button>
+            </li>
+        </ul>
+    }
+
+    <!-- ── DOCUMENTS TABLE ─────────────────────────── -->
+    <div class="card border-0 shadow-sm" style="background:#1a1617; @(User.IsInRole("SuperAdmin") ? "border-top-left-radius:0;" : "")">
+        <div class="card-header py-3 px-4 d-flex align-items-center justify-content-between"
+             style="background:#141112; border-bottom:1px solid rgba(255,91,0,0.2);">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-folder-open" style="color:#ff5b00;"></i>
+                <h6 class="mb-0 fw-bold text-white">Recently Uploaded Documents</h6>
+            </div>
         </div>
-        <div class = "card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0" id="documentTable">
+        <div class="card-body p-0">
+            <div class="table-responsive" style="max-height:520px; overflow-y:auto;">
+                <table class="table mb-0" id="documentTable" style="border-collapse:separate; width:100%;">
                     <thead>
-                        <tr class="text-nowrap" style="background: #1a1617; color: #ffffff; border-bottom: 2px solid #ff5b00;">
-                            <th class="py-3 px-4" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">File Name</th>
-                            <th class="py-3 px-4" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Type</th>
-                            @if (User.IsInRole("Admin")) {
-                                <th class="py-3 px-4" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Uploaded By</th>
+                        <tr id="docTableHead" style="background:#141112; border-bottom:2px solid #ff5b00;">
+                            <th class="py-3 px-4 text-nowrap resizable-th" data-col="0" data-sort="number"
+                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; user-select:none; cursor:pointer; min-width:40px;">
+                                # <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th class="py-3 px-3 text-nowrap resizable-th" data-col="1" data-sort="text"
+                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; user-select:none; cursor:pointer; min-width:100px;">
+                                File Name <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th class="py-3 px-3 text-nowrap resizable-th" data-col="2" data-sort="text"
+                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; user-select:none; cursor:pointer; min-width:80px;">
+                                Type <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            @if (ViewBag.IsAdminReviewMode == true)
+                            {
+                                <th class="py-3 px-3 text-nowrap resizable-th" data-col="3" data-sort="text"
+                                    style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; user-select:none; cursor:pointer; min-width:80px;">
+                                    Uploaded By <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span>
+                                    <div class="col-resizer"></div>
+                                </th>
                             }
-                            <th class="py-3 px-3" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Date Uploaded</th>
-                            <th class="py-3 px-3" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Status</th>
-                            <th class="text-end py-3 px-4" style="font-size: 15px; font-weight: 1000; letter-spacing: 1px; text-transform: uppercase;">Actions</th>
+                            <th class="py-3 px-3 text-nowrap resizable-th" data-col="@(ViewBag.IsAdminReviewMode == true ? 4 : 3)" data-sort="date"
+                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; user-select:none; cursor:pointer; min-width:90px;">
+                                Date <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th class="py-3 px-3 text-nowrap resizable-th" data-col="@(ViewBag.IsAdminReviewMode == true ? 5 : 4)" data-sort="status"
+                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; user-select:none; cursor:pointer; min-width:80px;">
+                                Status <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span>
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th class="py-3 px-3 text-nowrap resizable-th" data-col="@(ViewBag.IsAdminReviewMode == true ? 6 : 5)" data-sort="text"
+                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#ff4d6d; position:relative; user-select:none; min-width:100px;">
+                                <i class="fas fa-comment-slash me-1"></i>Rejection Reason
+                                <div class="col-resizer"></div>
+                            </th>
+                            <th class="py-3 px-4 text-nowrap text-end resizable-th"
+                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; min-width:120px;">
+                                Actions
+                                <div class="col-resizer"></div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
                         @if (Model != null && Model.Count > 0)
                         {
+                            int rowNum = 1;
                             foreach (var doc in Model)
                             {
-                                <tr data-status="@(doc.IsVerified ? "Verified" : "Pending")">
-                                    <td class="align-middle fw-semibold px-4 text-white">
-                                        <i class="fa-regular fa-file-lines text-light me-2"></i> @doc.FileName
+                                string rowStatus = doc.StatusId == 2 ? "Verified" : doc.StatusId == 3 ? "Rejected" : "Pending";
+                                <tr data-status="@rowStatus" data-roletype="@(doc.UploadedBy?.RoleId ?? 2)" style="border-bottom:1px solid rgba(255,255,255,0.05); transition:background .15s; @((doc.UploadedBy?.RoleId == 1 && User.IsInRole("SuperAdmin")) ? "display:none;" : "")">
+
+                                    <!-- # -->
+                                    <td class="align-middle px-4" style="color:rgba(255,255,255,0.25); font-size:12px; font-weight:700;">@rowNum</td>
+
+                                    <!-- File Name -->
+                                    <td class="align-middle px-3">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded-2 d-flex align-items-center justify-content-center flex-shrink-0"
+                                                 style="width:32px; height:32px; background:rgba(255,91,0,0.12);">
+                                                <i class="fas fa-file-pdf" style="color:#ff5b00; font-size:13px;"></i>
+                                            </div>
+                                            <span class="fw-semibold text-white" style="font-size:13px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="@doc.FileName">
+                                                @doc.FileName
+                                            </span>
+                                        </div>
                                     </td>
-                                    <td class="align-middle text-white fw-bold" style="color: #ff5b00 !important;">
-                                        @doc.DocumentType
+
+                                    <!-- Type -->
+                                    <td class="align-middle px-3">
+                                        <span style="background:rgba(255,91,0,0.12); color:#ff5b00; border:1px solid rgba(255,91,0,0.2); border-radius:20px; padding:3px 10px; font-size:11px; font-weight:700; white-space:nowrap;">
+                                            @doc.DocumentType
+                                        </span>
                                     </td>
-                                    @if (User.IsInRole("Admin")) {
-                                        <td class="align-middle text-white">
-                                            <i class="fas fa-user-circle text-light me-1"></i> @doc.UploadedBy?.FullName
+
+                                    <!-- Uploaded By (Admin) -->
+                                    @if (ViewBag.IsAdminReviewMode == true)
+                                    {
+                                        <td class="align-middle px-3">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                                     style="width:26px; height:26px; background:rgba(255,255,255,0.08); font-size:10px; font-weight:800; color:rgba(255,255,255,0.7);">
+                                                    @(doc.UploadedBy?.FullName?.Substring(0,1).ToUpper() ?? "?")
+                                                </div>
+                                                <span class="text-white" style="font-size:13px;">@doc.UploadedBy?.FullName</span>
+                                            </div>
                                         </td>
                                     }
-                                    <td class="align-middle text-white">
-                                        @doc.UploadedDate.ToLocalTime().ToString("MMM dd, yyyy - hh:mm tt")
+
+                                    <!-- Date -->
+                                    <td class="align-middle px-3" style="white-space:nowrap;">
+                                        <div class="fw-semibold text-white" style="font-size:13px;">
+                                            @doc.UploadedDate.ToLocalTime().ToString("dd MMM yyyy")
+                                        </div>
+                                        <div style="color:rgba(255,255,255,0.35); font-size:11px;">
+                                            @doc.UploadedDate.ToLocalTime().ToString("hh:mm tt")
+                                        </div>
                                     </td>
-                                    <td class="align-middle">
-                                        @if (doc.IsVerified)
+
+                                    <!-- Status -->
+                                    <td class="align-middle px-3">
+                                        @if (doc.StatusId == 2)
                                         {
-                                            <span class="badge bg-success px-3 py-2"><i class="fas fa-check-circle me-1"></i> Verified</span>
+                                            <span style="background:rgba(40,199,111,0.12); color:#28c76f; border:1px solid rgba(40,199,111,0.25); border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; white-space:nowrap;">
+                                                <i class="fas fa-shield-alt me-1"></i>Verified
+                                            </span>
+                                        }
+                                        else if (doc.StatusId == 3)
+                                        {
+                                            <span style="background:rgba(220,53,69,0.12); color:#ff4d6d; border:1px solid rgba(220,53,69,0.25); border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; white-space:nowrap;">
+                                                <i class="fas fa-ban me-1"></i>Rejected
+                                            </span>
                                         }
                                         else
                                         {
-                                            <span class="badge bg-warning text-dark px-3 py-2"><i class="fas fa-clock me-1"></i> Pending</span>
+                                            <span style="background:rgba(255,193,7,0.12); color:#ffc107; border:1px solid rgba(255,193,7,0.25); border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; white-space:nowrap;">
+                                                <i class="fas fa-hourglass-half me-1"></i>Pending
+                                            </span>
                                         }
                                     </td>
-                                    <td class="align-middle px-4">
-                                        <div class="d-flex justify-content-end align-items-center gap-2">
-                                            @if (!doc.IsVerified && User.IsInRole("Admin"))
+
+                                    <!-- Rejection Reason -->
+                                    <td class="align-middle px-3" style="min-width:150px; max-width:200px;">
+                                        @if (doc.StatusId == 3 && !string.IsNullOrEmpty(doc.RejectionReason))
+                                        {
+                                            <div style="border-left: 3px solid rgba(255,77,109,0.6); padding-left:8px;">
+                                                <div style="color:#ff4d6d; font-size:12px; line-height:1.55; word-break:break-word; white-space:normal;">
+                                                    @doc.RejectionReason
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span style="color:rgba(255,255,255,0.15); font-size:15px; letter-spacing:1px;">—</span>
+                                        }
+                                    </td>
+
+                                    <!-- Actions: always a single horizontal row, no wrap -->
+                                    <td class="align-middle px-3" style="white-space:nowrap;">
+                                        <div class="d-flex justify-content-end align-items-center gap-1" style="flex-wrap:nowrap;">
+
+                                            @if (doc.StatusId == 1 && ViewBag.IsAdminReviewMode == true)
                                             {
-                                                <a class="btn btn-sm btn-outline-success fw-bold" title="Verify Document"
-                                                   data-bs-toggle="modal" data-bs-target="#verifyModal"
-                                                   onclick="setVerifyId(@doc.DocumentId, '@doc.FileName')">
-                                                    <i class="fas fa-check-circle"></i>
-                                                </a>
+                                                <!-- Pending: Approve + Reject -->
+                                                <button class="act-btn green" title="Approve"
+                                                        data-bs-toggle="modal" data-bs-target="#verifyModal"
+                                                        onclick="setVerifyId(@doc.DocumentId, '@doc.FileName')">
+                                                    <i class="fas fa-check-double"></i>
+                                                </button>
+                                                <button class="act-btn pink" title="Reject"
+                                                        data-bs-toggle="modal" data-bs-target="#rejectModal"
+                                                        onclick="setRejectId(@doc.DocumentId, '@doc.FileName')">
+                                                    <i class="fas fa-ban"></i>
+                                                </button>
                                             }
-                                            <a href="@doc.FilePath" download="@doc.FileName" class="btn btn-sm btn-outline-light fw-bold" title="Download Document">
-                                                <i class="fas fa-download"></i>
-                                            </a>
-                                            @if (!doc.IsVerified || User.IsInRole("Admin"))
+
+                                            <!-- View PDF: opens browser viewer in modal -->
+                                            <button class="act-btn ghost" title="View Document"
+                                                    onclick="openPdfViewer('@doc.FilePath', '@doc.FileName')">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+
+                                            <!-- Delete: icon only -->
+                                            @{
+                                                bool canDelete = ViewBag.IsAdminReviewMode == true || (doc.StatusId != 2 && doc.StatusId != 3);
+                                            }
+                                            @if (canDelete)
                                             {
-                                                <a class="btn btn-sm btn-outline-danger fw-bold" title="Delete Document"
-                                                    data-bs-toggle="modal" data-bs-target="#deleteModal"
-                                                    onclick="setDeleteId(@doc.DocumentId, '@doc.FileName')">
+                                                <button class="act-btn red" title="Delete"
+                                                        data-bs-toggle="modal" data-bs-target="#deleteModal"
+                                                        onclick="setDeleteId(@doc.DocumentId, '@doc.FileName')">
                                                     <i class="fas fa-trash-alt"></i>
-                                                </a>
+                                                </button>
                                             }
                                         </div>
                                     </td>
-                                
                                 </tr>
+                                rowNum++;
                             }
                         }
                         else
                         {
                             <tr>
-                                <td colspan="6" class="text-center py-5 text-light">
-                                    <i class="fas fa-folder-open fa-3x mb-3 opacity-50"></i>
-                                    <h5 class="text-white">No documents have been uploaded yet.</h5>
-                                    <p class="mb-0 text-white-50">Be the first to upload a document using the form above!</p>
+                                <td colspan="8" class="text-center py-5">
+                                    <div class="d-inline-flex flex-column align-items-center gap-2">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center mb-2"
+                                             style="width:60px; height:60px; background:rgba(255,91,0,0.1);">
+                                            <i class="fas fa-folder-open fa-xl" style="color:rgba(255,91,0,0.5);"></i>
+                                        </div>
+                                        <h6 class="text-white mb-1">No documents uploaded yet</h6>
+                                        <p class="mb-0" style="color:rgba(255,255,255,0.35); font-size:13px;">Use the upload form above to get started.</p>
+                                    </div>
                                 </td>
                             </tr>
                         }
-
-
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
+</div>
 
-<!-- Delete Modal -->
+<!-- ═══════════════════ MODALS ═══════════════════ -->
+
+<!-- DELETE MODAL -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i> Delete Document</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0" style="background:#120f10; box-shadow:0 24px 64px rgba(0,0,0,0.65);">
+            <div class="modal-header border-0 px-4 pt-4 pb-0">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center"
+                         style="width:44px; height:44px; background:rgba(220,53,69,0.15); border:1px solid rgba(220,53,69,0.3);">
+                        <i class="fas fa-trash-alt" style="color:#dc3545; font-size:17px;"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold text-white">Delete Document</h5>
+                        <small style="color:rgba(255,255,255,0.35);">Permanent &amp; irreversible action</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete <strong id="deleteDocumentName"></strong>?</p>
-                <p class="text-danger small mb-0">This action cannot be undone. The physical file will be permanently deleted from the server.</p>
+            <div class="modal-body px-4 py-3">
+                <div class="rounded-3 p-3" style="background:rgba(220,53,69,0.07); border:1px solid rgba(220,53,69,0.18);">
+                    <p class="mb-1 text-white" style="font-size:13px;">You are permanently deleting:</p>
+                    <p class="mb-0 fw-bold" style="color:#dc3545; font-size:14px;">
+                        <i class="fas fa-file-pdf me-2"></i><span id="deleteDocumentName"></span>
+                    </p>
+                </div>
+                <p class="small mt-3 mb-0" style="color:rgba(255,255,255,0.35);">
+                    <i class="fas fa-exclamation-triangle me-1" style="color:#dc3545;"></i>
+                    The physical file will be removed from the server and cannot be recovered.
+                </p>
                 <input type="hidden" id="deleteDocumentId" />
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger fw-bold" onclick="confirmDelete()">Delete File</button>
+            <div class="modal-footer border-0 px-4 pb-4 gap-2">
+                <button type="button" class="act-btn ghost px-4 py-2" data-bs-dismiss="modal" style="border-radius:8px; font-size:13px;">
+                    <i class="fas fa-arrow-left"></i> Cancel
+                </button>
+                <button type="button" class="act-btn red px-4 py-2" onclick="confirmDelete()" style="border-radius:8px; font-size:13px; background:#dc3545; color:#fff;">
+                    <i class="fas fa-trash-alt"></i> Yes, Delete Permanently
+                </button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Verify Modal -->
+<!-- VERIFY / APPROVE MODAL -->
 <div class="modal fade" id="verifyModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i> Verify Document</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0" style="background:#120f10; box-shadow:0 24px 64px rgba(0,0,0,0.65);">
+            <div class="modal-header border-0 px-4 pt-4 pb-0">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center"
+                         style="width:44px; height:44px; background:rgba(40,199,111,0.15); border:1px solid rgba(40,199,111,0.3);">
+                        <i class="fas fa-check-double" style="color:#28c76f; font-size:17px;"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold text-white">Approve Document</h5>
+                        <small style="color:rgba(255,255,255,0.35);">Mark as officially verified</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <p>Are you sure you want to mark <strong id="verifyDocumentName"></strong> as verified?</p>
-                <p class="text-muted small mb-0">This will update the document's status to verified.</p>
+            <div class="modal-body px-4 py-3">
+                <div class="rounded-3 p-3" style="background:rgba(40,199,111,0.07); border:1px solid rgba(40,199,111,0.18);">
+                    <p class="mb-1 text-white" style="font-size:13px;">You are approving:</p>
+                    <p class="mb-0 fw-bold" style="color:#28c76f; font-size:14px;">
+                        <i class="fas fa-file-pdf me-2"></i><span id="verifyDocumentName"></span>
+                    </p>
+                </div>
+                <p class="small mt-3 mb-0" style="color:rgba(255,255,255,0.35);">
+                    <i class="fas fa-info-circle me-1" style="color:#28c76f;"></i>
+                    Once approved, the document status will update and no further review actions will be available.
+                </p>
                 <input type="hidden" id="verifyDocumentId" />
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success fw-bold" onclick="confirmVerify()">Verify Document</button>
+            <div class="modal-footer border-0 px-4 pb-4 gap-2">
+                <button type="button" class="act-btn ghost px-4 py-2" data-bs-dismiss="modal" style="border-radius:8px; font-size:13px;">
+                    <i class="fas fa-arrow-left"></i> Cancel
+                </button>
+                <button type="button" class="act-btn green px-4 py-2" onclick="confirmVerify()" style="border-radius:8px; font-size:13px; background:#28c76f; color:#000;">
+                    <i class="fas fa-check-double"></i> Yes, Approve Document
+                </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- REJECT MODAL -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0" style="background:#120f10; box-shadow:0 24px 64px rgba(0,0,0,0.65);">
+            <div class="modal-header border-0 px-4 pt-4 pb-0">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center"
+                         style="width:44px; height:44px; background:rgba(255,91,0,0.15); border:1px solid rgba(255,91,0,0.3);">
+                        <i class="fas fa-ban" style="color:#ff5b00; font-size:17px;"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold text-white">Reject Document</h5>
+                        <small style="color:rgba(255,255,255,0.35);">Provide a clear reason for the user</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <div class="rounded-3 p-3 mb-3" style="background:rgba(255,91,0,0.07); border:1px solid rgba(255,91,0,0.2);">
+                    <p class="mb-1 text-white" style="font-size:13px;">Rejecting:</p>
+                    <p class="mb-0 fw-bold" style="color:#ff5b00; font-size:14px;">
+                        <i class="fas fa-file-pdf me-2"></i><span id="rejectDocumentName"></span>
+                    </p>
+                </div>
+                <label class="form-label fw-semibold text-white mb-1" style="font-size:13px;">
+                    <i class="fas fa-comment-alt me-1" style="color:#ff5b00;"></i>
+                    Rejection Reason <span class="text-danger">*</span>
+                </label>
+                <textarea id="rejectReason" class="form-control" rows="3"
+                          placeholder="Write a clear reason so the user knows what to fix..."
+                          style="background:#1a1617; color:#fff; border:1px solid rgba(255,91,0,0.25); resize:none; font-size:13px;"></textarea>
+                <div id="rejectReasonError" class="mt-1" style="display:none; color:#ff4d6d; font-size:12px;">
+                    <i class="fas fa-exclamation-circle me-1"></i>Rejection reason is required.
+                </div>
+                <p class="small mt-2 mb-0" style="color:rgba(255,255,255,0.3);">
+                    <i class="fas fa-eye me-1" style="color:#ff5b00;"></i>
+                    This reason will be visible to the user via the Feedback button.
+                </p>
+                <input type="hidden" id="rejectDocumentId" />
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 gap-2">
+                <button type="button" class="act-btn ghost px-4 py-2" data-bs-dismiss="modal" style="border-radius:8px; font-size:13px;">
+                    <i class="fas fa-arrow-left"></i> Cancel
+                </button>
+                <button type="button" class="act-btn orange px-4 py-2" onclick="confirmReject()" style="border-radius:8px; font-size:13px; background:#ff5b00; color:#fff;">
+                    <i class="fas fa-ban"></i> Submit Rejection
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FEEDBACK MODAL (User view for rejection reason) -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0" style="background:#120f10; box-shadow:0 24px 64px rgba(0,0,0,0.65);">
+            <div class="modal-header border-0 px-4 pt-4 pb-0">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center"
+                         style="width:44px; height:44px; background:rgba(255,77,109,0.15); border:1px solid rgba(255,77,109,0.3);">
+                        <i class="fas fa-comment-slash" style="color:#ff4d6d; font-size:17px;"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold text-white">Document Rejected</h5>
+                        <small style="color:rgba(255,255,255,0.35);">Review the admin's feedback below</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <p class="mb-2" style="color:rgba(255,255,255,0.5); font-size:12px;">
+                    <i class="fas fa-file-pdf me-1" style="color:#ff5b00;"></i>
+                    <span id="feedbackFileName" class="fw-semibold text-white"></span>
+                </p>
+                <div class="rounded-3 p-3" style="background:rgba(255,77,109,0.08); border:1px solid rgba(255,77,109,0.2);">
+                    <p class="mb-0" style="color:rgba(255,255,255,0.8); font-size:13px; line-height:1.65;" id="feedbackReason"></p>
+                </div>
+                <p class="small mt-3 mb-0" style="color:rgba(255,255,255,0.35);">
+                    <i class="fas fa-redo me-1" style="color:#ff5b00;"></i>
+                    Please fix the issue and re-upload a corrected version.
+                </p>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button type="button" class="act-btn ghost px-4 py-2" data-bs-dismiss="modal" style="border-radius:8px; font-size:13px;">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PDF VIEWER MODAL -->
+<div class="modal fade" id="pdfViewerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen" style="margin:0;">
+        <div class="modal-content border-0" style="background:#0e0c0d;">
+
+            <!-- Header bar -->
+            <div class="modal-header border-0 px-4 py-2 d-flex align-items-center"
+                 style="background:#141112; border-bottom:1px solid rgba(255,91,0,0.2); min-height:54px;">
+                <div class="d-flex align-items-center gap-2 me-auto">
+                    <div class="rounded-2 d-flex align-items-center justify-content-center"
+                         style="width:32px; height:32px; background:rgba(255,91,0,0.15);">
+                        <i class="fas fa-file-pdf" style="color:#ff5b00; font-size:14px;"></i>
+                    </div>
+                    <span id="pdfViewerTitle" class="fw-semibold text-white" style="font-size:14px; max-width:480px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+                </div>
+
+                <!-- Action buttons in header -->
+                <div class="d-flex align-items-center gap-2">
+                    <a id="pdfDownloadBtn" href="#" download
+                       class="act-btn ghost" style="font-size:12px;" title="Download">
+                        <i class="fas fa-file-download"></i> Download
+                    </a>
+                    <button class="act-btn ghost" style="font-size:12px;" title="Print"
+                            onclick="printPdf()">
+                        <i class="fas fa-print"></i> Print
+                    </button>
+                    <button type="button" class="act-btn red" style="font-size:12px;" title="Close viewer"
+                            data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+            </div>
+
+            <!-- PDF iframe — uses browser's built-in PDF viewer -->
+            <div class="modal-body p-0" style="height:calc(100vh - 54px); overflow:hidden;">
+                <iframe id="pdfViewerFrame"
+                        src=""
+                        style="width:100%; height:100%; border:none;"
+                        title="PDF Viewer">
+                    <p class="text-white p-4">Your browser does not support inline PDF viewing.
+                        <a id="pdfFallbackLink" href="#" style="color:#ff5b00;">Click here to download the file.</a>
+                    </p>
+                </iframe>
+            </div>
+
         </div>
     </div>
 </div>
 
 @section Scripts {
-    <script>
-        // Fills the modal with the correct ID and Filename when the user clicks the trash icon
-        function setDeleteId(id, name) {
-            document.getElementById('deleteDocumentId').value = id;
-            document.getElementById('deleteDocumentName').textContent = name;
-        }
+<script>
+    // ── Toast ────────────────────────────────
+    function showToast(msg, type) {
+        const t = document.getElementById('actionToast');
+        const i = document.getElementById('toastIcon');
+        const s = document.getElementById('toastMessage');
+        const map = {
+            success: { color:'#28c76f', cls:'fas fa-check-circle' },
+            error:   { color:'#dc3545', cls:'fas fa-times-circle' },
+            info:    { color:'#ff5b00', cls:'fas fa-circle-notch fa-spin' }
+        };
+        const m = map[type] || map.info;
+        t.style.borderLeftColor = m.color;
+        i.className = m.cls; i.style.color = m.color;
+        s.textContent = msg;
+        t.style.top = '22px';
+        setTimeout(() => t.style.top = '-80px', 3500);
+    }
 
-        // Sends the AJAX request to the C# controller to delete it
-        function confirmDelete() {
-            var id = document.getElementById('deleteDocumentId').value;
+    // ── Delete ───────────────────────────────
+    function setDeleteId(id, name) {
+        document.getElementById('deleteDocumentId').value = id;
+        document.getElementById('deleteDocumentName').textContent = name;
+    }
+    function confirmDelete() {
+        const id = document.getElementById('deleteDocumentId').value;
+        bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+        showToast('Deleting document…', 'info');
+        fetch('/Dashboard/DeleteDocument/' + id, { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) { showToast('Document deleted successfully.', 'success'); setTimeout(() => location.reload(), 1200); }
+            else showToast(d.message || 'Delete failed.', 'error');
+        }).catch(() => showToast('Network error.', 'error'));
+    }
+
+    // ── Verify ───────────────────────────────
+    function setVerifyId(id, name) {
+        document.getElementById('verifyDocumentId').value = id;
+        document.getElementById('verifyDocumentName').textContent = name;
+    }
+    function confirmVerify() {
+        const id = document.getElementById('verifyDocumentId').value;
+        bootstrap.Modal.getInstance(document.getElementById('verifyModal')).hide();
+        showToast('Approving document…', 'info');
+        fetch('/Dashboard/VerifyDocument/' + id, { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) { showToast('Document approved & verified!', 'success'); setTimeout(() => location.reload(), 1200); }
+            else showToast(d.message || 'Verify failed.', 'error');
+        }).catch(() => showToast('Network error.', 'error'));
+    }
+
+    // ── Reject ───────────────────────────────
+    function setRejectId(id, name) {
+        document.getElementById('rejectDocumentId').value = id;
+        document.getElementById('rejectDocumentName').textContent = name;
+        document.getElementById('rejectReason').value = '';
+        document.getElementById('rejectReasonError').style.display = 'none';
+    }
+    function confirmReject() {
+        const id     = document.getElementById('rejectDocumentId').value;
+        const reason = document.getElementById('rejectReason').value.trim();
+        if (!reason) {
+            document.getElementById('rejectReasonError').style.display = 'block';
+            document.getElementById('rejectReason').focus(); return;
+        }
+        document.getElementById('rejectReasonError').style.display = 'none';
+        bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
+        showToast('Submitting rejection…', 'info');
+        fetch('/Dashboard/RejectDocument/' + id + '?reason=' + encodeURIComponent(reason), { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) { showToast('Document rejected. User notified.', 'error'); setTimeout(() => location.reload(), 1400); }
+            else showToast(d.message || 'Reject failed.', 'error');
+        }).catch(() => showToast('Network error.', 'error'));
+    }
+
+    // ── Feedback (user) ──────────────────────
+    function setFeedback(fileName, reason) {
+        document.getElementById('feedbackFileName').textContent = fileName;
+        document.getElementById('feedbackReason').textContent   = reason || 'No reason provided.';
+    }
+
+    // ── Filter / Search ──────────────────────
+    window.currentRoleTypeFilter = 2; // Default to Users
+    
+    function filterByRoleType(type) {
+        window.currentRoleTypeFilter = type;
+        if (type === 2) {
+            document.getElementById('users-tab').style.color = '#ff5b00';
+            document.getElementById('users-tab').style.background = '#1a1617';
+            document.getElementById('admins-tab').style.color = 'rgba(255,255,255,0.5)';
+            document.getElementById('admins-tab').style.background = 'transparent';
+        } else {
+            document.getElementById('admins-tab').style.color = '#ff5b00';
+            document.getElementById('admins-tab').style.background = '#1a1617';
+            document.getElementById('users-tab').style.color = 'rgba(255,255,255,0.5)';
+            document.getElementById('users-tab').style.background = 'transparent';
+        }
+        filterTable();
+    }
+
+    function filterTable() {
+        const q      = (document.getElementById('searchInput')?.value || '').toLowerCase();
+        const filter = document.getElementById('statusFilter')?.value || '';
+        const activeRoleTypeFilter = window.currentRoleTypeFilter || 2;
+        const isSuperAdmin = document.getElementById('users-tab') !== null;
+        
+        const rows   = document.querySelectorAll('#documentTable tbody tr');
+        let count    = 0;
+        rows.forEach(row => {
+            if (row.cells.length < 3) return;
             
-            fetch('/Dashboard/DeleteDocument/' + id, {
-                method: 'POST'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.reload(); // Refresh the page to make the row disappear
-                } else {
-                    alert(data.message);
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        }
+            let roleTypeMatch = true;
+            if (isSuperAdmin) {
+                const roleType = parseInt(row.getAttribute('data-roletype') || 2);
+                roleTypeMatch = (roleType === activeRoleTypeFilter);
+            }
 
-        // Fills the verify modal with the correct ID and Filename
-        function setVerifyId(id, name) {
-            document.getElementById('verifyDocumentId').value = id;
-            document.getElementById('verifyDocumentName').textContent = name;
-        }
+            const match = row.textContent.toLowerCase().includes(q)
+                       && (!filter || row.getAttribute('data-status') === filter)
+                       && roleTypeMatch;
+            row.style.display = match ? '' : 'none';
+            if (match) count++;
+        });
+        const rc = document.getElementById('resultCount');
+        if (rc) rc.innerHTML = `<strong style="color:#ff5b00;">${count}</strong> of <strong>@totalDocs</strong> documents`;
+    }
 
-        // Sends the AJAX request to verify a document
-        function confirmVerify() {
-            var id = document.getElementById('verifyDocumentId').value;
-            
-            fetch('/Dashboard/VerifyDocument/' + id, {
-                method: 'POST'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.reload(); // Refresh to update the status badge
-                } else {
-                    alert(data.message);
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        }
+    // ── Tooltips + Init ───────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize tooltips for standard elements and all action buttons
+        document.querySelectorAll('[data-bs-toggle="tooltip"], .act-btn[title]').forEach(el => new bootstrap.Tooltip(el, { trigger: 'hover' }));
 
-         // Search & Filter functionality for Documents
-        function filterTable() {
-            var searchText = document.getElementById('searchInput').value.toLowerCase();
-            var statusFilter = document.getElementById('statusFilter').value;
-            var rows = document.querySelectorAll('#documentTable tbody tr');
-            var visibleCount = 0;
-            rows.forEach(function(row) {
-                // Ignore the "No documents uploaded yet" placeholder row
-                if (row.cells.length === 1 && row.cells[0].colSpan === 5) return;
-                var text = row.textContent.toLowerCase();
-                var status = row.getAttribute('data-status');
-                
-                var matchesSearch = text.includes(searchText);
-                var matchesStatus = !statusFilter || status === statusFilter;
-                if (matchesSearch && matchesStatus) {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
+        // Clear iframe when viewer modal is closed
+        document.getElementById('pdfViewerModal').addEventListener('hidden.bs.modal', () => {
+            document.getElementById('pdfViewerFrame').src = '';
+        });
+
+        makeColumnsResizable();
+        attachSortListeners();
+    });
+
+    // ═══════════════════════════════════════════
+    // COLUMN RESIZE
+    // ═══════════════════════════════════════════
+    function makeColumnsResizable() {
+        const table    = document.getElementById('documentTable');
+        const handles  = table.querySelectorAll('.col-resizer');
+
+        handles.forEach(handle => {
+            const th = handle.parentElement;
+            let startX, startW;
+
+            handle.addEventListener('mousedown', e => {
+                e.preventDefault();
+                e.stopPropagation();          // don't trigger sort click
+                startX = e.pageX;
+                startW = th.offsetWidth;
+                handle.classList.add('dragging');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+
+                function onMove(e) {
+                    const newW = Math.max(40, startW + (e.pageX - startX));
+                    th.style.width = newW + 'px';
+                    th.style.minWidth = newW + 'px';
                 }
+                function onUp() {
+                    handle.classList.remove('dragging');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                }
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
             });
-            document.getElementById('resultCount').innerHTML =
-                'Showing <strong>' + visibleCount + '</strong> of <strong>@(Model?.Count ?? 0)</strong> documents';
+        });
+    }
+
+    // ═══════════════════════════════════════════
+    // COLUMN SORT
+    // ═══════════════════════════════════════════
+    let _sortCol = -1;
+    let _sortAsc = true;
+
+    // Status sort order: Pending=1, Verified=2, Rejected=3
+    const STATUS_ORDER = { 'Pending': 1, 'Verified': 2, 'Rejected': 3 };
+
+    function attachSortListeners() {
+        const ths = document.querySelectorAll('#docTableHead th[data-sort]');
+        ths.forEach(th => {
+            th.addEventListener('click', e => {
+                // Ignore clicks on the resize handle itself
+                if (e.target.classList.contains('col-resizer')) return;
+                const col     = parseInt(th.getAttribute('data-col'));
+                const sortType = th.getAttribute('data-sort');
+                if (_sortCol === col) {
+                    _sortAsc = !_sortAsc;
+                } else {
+                    _sortCol = col;
+                    _sortAsc = true;
+                }
+                updateSortIcons(th);
+                sortTable(col, sortType, _sortAsc);
+            });
+        });
+    }
+
+    function updateSortIcons(activeTh) {
+        document.querySelectorAll('#docTableHead th[data-sort]').forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc');
+            const icon = th.querySelector('.sort-icon');
+            if (icon) { icon.textContent = '⇅'; icon.style.opacity = '.4'; icon.style.color = ''; }
+        });
+        const icon = activeTh.querySelector('.sort-icon');
+        if (_sortAsc) {
+            activeTh.classList.add('sort-asc');
+            if (icon) { icon.textContent = '↑'; icon.style.opacity = '1'; icon.style.color = '#ff5b00'; }
+        } else {
+            activeTh.classList.add('sort-desc');
+            if (icon) { icon.textContent = '↓'; icon.style.opacity = '1'; icon.style.color = '#ff5b00'; }
         }
-    </script>
+    }
+
+    function sortTable(colIndex, sortType, asc) {
+        const tbody = document.querySelector('#documentTable tbody');
+        const rows  = Array.from(tbody.querySelectorAll('tr')).filter(r => r.cells.length > 2);
+
+        rows.sort((a, b) => {
+            const cellA = a.cells[colIndex];
+            const cellB = b.cells[colIndex];
+            if (!cellA || !cellB) return 0;
+
+            let valA = cellA.innerText.trim();
+            let valB = cellB.innerText.trim();
+
+            if (sortType === 'number') {
+                return asc ? (parseFloat(valA)||0) - (parseFloat(valB)||0)
+                           : (parseFloat(valB)||0) - (parseFloat(valA)||0);
+            }
+            if (sortType === 'date') {
+                const dA = new Date(valA.split('\n')[0]);
+                const dB = new Date(valB.split('\n')[0]);
+                return asc ? dA - dB : dB - dA;
+            }
+            if (sortType === 'status') {
+                const sA = STATUS_ORDER[valA.trim()] || 99;
+                const sB = STATUS_ORDER[valB.trim()] || 99;
+                return asc ? sA - sB : sB - sA;
+            }
+            return asc
+                ? valA.toLowerCase().localeCompare(valB.toLowerCase())
+                : valB.toLowerCase().localeCompare(valA.toLowerCase());
+        });
+
+        // Re-append sorted rows — entire row moves, all data stays together
+        rows.forEach(r => tbody.appendChild(r));
+
+        // Re-number the # column
+        rows.forEach((r, i) => {
+            if (r.cells[0]) r.cells[0].textContent = i + 1;
+        });
+    }
+
+    // ── PDF Viewer ────────────────────────────
+    function openPdfViewer(filePath, fileName) {
+        document.getElementById('pdfViewerTitle').textContent = fileName;
+        document.getElementById('pdfViewerFrame').src = filePath;
+        document.getElementById('pdfDownloadBtn').href = filePath;
+        document.getElementById('pdfDownloadBtn').setAttribute('download', fileName);
+        if (document.getElementById('pdfFallbackLink')) {
+            document.getElementById('pdfFallbackLink').href = filePath;
+        }
+        new bootstrap.Modal(document.getElementById('pdfViewerModal')).show();
+    }
+
+    function printPdf() {
+        const frame = document.getElementById('pdfViewerFrame');
+        try {
+            frame.contentWindow.focus();
+            frame.contentWindow.print();
+        } catch(e) {
+            window.open(frame.src, '_blank');
+        }
+    }
+</script>
 }

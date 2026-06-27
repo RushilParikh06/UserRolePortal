@@ -70,6 +70,14 @@ namespace UserRolePortal.Models
         [Display(Name = "Gender")]
         public required string Gender { get; set; }
 
+        // Status - 1: Verified, 2: Pending (Default), 3: Suspended
+        [Display(Name = "Status")]
+        public int Status { get; set; } = 2;
+
+        // StatusReason - Reason for suspension or unsuspension
+        [Display(Name = "Status Reason")]
+        public string? StatusReason { get; set; }
+
         // Navigation property - relationship to Role table
         public virtual Role? Role { get; set; }
     }
