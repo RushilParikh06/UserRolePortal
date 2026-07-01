@@ -129,11 +129,6 @@ namespace UserRolePortal.Controllers
             var captchaCode = CaptchaService.GenerateRandomString(5);
             HttpContext.Session.SetString("CaptchaCode", captchaCode);
 
-            if (!OperatingSystem.IsWindows())
-            {
-                return StatusCode(501, "Captcha generation is only supported on Windows on this server.");
-            }
-
             var result = CaptchaService.GenerateCaptchaImage(captchaCode);
             return File(result, "image/png");
         }
