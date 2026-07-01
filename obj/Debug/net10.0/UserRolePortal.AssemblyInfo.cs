@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("UserRolePortal")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+24cf0bd4915244cffe1caf0d29a742f7d5ede79d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d9dbc400cf381e2f4198ff1bb1680a7ea2264089")]
 [assembly: System.Reflection.AssemblyProductAttribute("UserRolePortal")]
 [assembly: System.Reflection.AssemblyTitleAttribute("UserRolePortal")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

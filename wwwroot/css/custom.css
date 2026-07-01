@@ -934,3 +934,12 @@ span.flatpickr-weekday {
     color: #ff5000;
     transform: rotate(180deg); 
 }
+
+/* Hide native browser password reveal (eye) icons */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none !important;
+}
+input[type="password"]::-webkit-reveal {
+    display: none !important;
+}

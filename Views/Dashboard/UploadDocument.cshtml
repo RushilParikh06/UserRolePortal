@@ -372,7 +372,18 @@
                                     <td class="align-middle px-3" style="white-space:nowrap;">
                                         <div class="d-flex justify-content-end align-items-center gap-1" style="flex-wrap:nowrap;">
 
-                                            @if (doc.StatusId == 1 && ViewBag.IsAdminReviewMode == true)
+                                            @{
+                                                int currentUserId = int.Parse(User.FindFirst("UserId")?.Value ?? "0");
+                                                bool isOwnDocument = (doc.UserId == currentUserId);
+                                                bool canVerify = (ViewBag.IsAdminReviewMode == true) && !isOwnDocument;
+                                                
+                                                if (canVerify && !User.IsInRole("SuperAdmin") && (doc.UploadedBy?.RoleId == 1 || doc.UploadedBy?.RoleId == 3))
+                                                {
+                                                    canVerify = false;
+                                                }
+                                            }
+
+                                            @if (doc.StatusId == 1 && canVerify)
                                             {
                                                 <!-- Pending: Approve + Reject -->
                                                 <button class="act-btn green" title="Approve"
