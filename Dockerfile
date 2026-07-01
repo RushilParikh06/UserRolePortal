@@ -3,12 +3,11 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy the project file and restore dependencies
-COPY ["UserRolePortal/UserRolePortal.csproj", "UserRolePortal/"]
-RUN dotnet restore "UserRolePortal/UserRolePortal.csproj"
+COPY ["UserRolePortal.csproj", "./"]
+RUN dotnet restore "./UserRolePortal.csproj"
 
 # Copy the rest of the code and build
 COPY . .
-WORKDIR "/src/UserRolePortal"
 RUN dotnet publish "UserRolePortal.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # Stage 2: Run the application
