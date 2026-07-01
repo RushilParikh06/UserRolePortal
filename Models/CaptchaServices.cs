@@ -59,7 +59,7 @@ namespace UserRolePortal.Models
             using var textPaint = new SKPaint
             {
                 IsAntialias = true,
-                Typeface = SKTypeface.Default, // Safest for Linux/Docker without installed fonts
+                Typeface = SKTypeface.CreateDefault(), // CreateDefault() is safest
                 TextSize = random.Next(24, 30)
             };
 
@@ -73,7 +73,8 @@ namespace UserRolePortal.Models
                 canvas.Save();
                 
                 // Rotate each character slightly to warp the text
-                canvas.Translate(x, height / 2 + textPaint.TextSize / 3 + random.Next(-5, 5));
+                // Adjust Y to be roughly in the middle of the box
+                canvas.Translate(x, (height / 2f) + (textPaint.TextSize / 3f) + random.Next(-3, 3));
                 canvas.RotateDegrees(random.Next(-15, 15));
                 
                 canvas.DrawText(captchaText[i].ToString(), 0, 0, textPaint);
