@@ -1,12 +1,17 @@
 using System;
 using System.IO;
+using System.Collections.Concurrent;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace UserRolePortal.Services
 {
     public static class AppLogger
     {
-        private static readonly object _lock = new object();
         private static readonly string _logDirectory;
+        private static readonly ConcurrentQueue<string> _logQueue = new();
+        private static readonly SemaphoreSlim _signal = new(0);
+        private static readonly Task _writerTask;
 
         static AppLogger()
         {
@@ -15,6 +20,9 @@ namespace UserRolePortal.Services
             {
                 Directory.CreateDirectory(_logDirectory);
             }
+            
+            // Start background writer task
+            _writerTask = Task.Run(ProcessQueueAsync);
         }
 
         private static string GetLogFilePath()
@@ -39,17 +47,28 @@ namespace UserRolePortal.Services
 
         private static void WriteLog(string level, string message)
         {
-            lock (_lock)
+            string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{level}] {message}{Environment.NewLine}";
+            _logQueue.Enqueue(logEntry);
+            _signal.Release();
+        }
+
+        private static async Task ProcessQueueAsync()
+        {
+            while (true)
             {
-                try
+                await _signal.WaitAsync(); // Wait until there is a log in the queue
+                if (_logQueue.TryDequeue(out var logEntry))
                 {
-                    string filePath = GetLogFilePath();
-                    string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{level}] {message}{Environment.NewLine}";
-                    File.AppendAllText(filePath, logEntry);
-                }
-                catch
-                {
-                    // Fail silently for logging
+                    try
+                    {
+                        string filePath = GetLogFilePath();
+                        // Asynchronously append to file, preventing thread blocking
+                        await File.AppendAllTextAsync(filePath, logEntry);
+                    }
+                    catch
+                    {
+                        // Fail silently for logging
+                    }
                 }
             }
         }
