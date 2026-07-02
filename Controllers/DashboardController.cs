@@ -232,7 +232,7 @@ namespace UserPortal.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> UploadDocument(IFormFile aadharFile, IFormFile panFile, List<IFormFile> optionalFiles)
+        public async Task<IActionResult> UploadDocument([FromForm] IFormFile aadharFile, [FromForm] IFormFile panFile, [FromForm] List<IFormFile> optionalFiles)
         {
             // Block suspended users
             if (User.FindFirst("Status")?.Value == "3" && !User.IsInRole("SuperAdmin"))

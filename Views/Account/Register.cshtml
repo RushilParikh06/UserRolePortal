@@ -47,7 +47,7 @@
             <!-- Date of Birth (full width) -->
             <div class="form-group">
                 <label for="regDOB">Date of Birth <span class="required">*</span></label>
-                <input type="text" id="regDOB" name="DOB" required placeholder="Select Date of Birth...">
+                <input type="text" id="regDOB" name="DOB" required placeholder="YYYY-MM-DD">
             </div>
 
             <!-- Username (full width) -->
@@ -144,12 +144,10 @@
 
 @section Scripts {
     <script>
-        // Initialize Flatpickr for DOB selection
-        flatpickr("#regDOB", {
-            dateFormat: "Y-m-d",
-            maxDate: "today", // Native prevention of future date selection
-            disableMobile: "true",
-            position: "above" // Forces the pop-up to appear just above the input field
+        // Initialize custom calendar for DOB selection
+        initCalendar("#regDOB", {
+            maxDate: "today",
+            position: "above"
         });
 
         // Client-side validation on submit

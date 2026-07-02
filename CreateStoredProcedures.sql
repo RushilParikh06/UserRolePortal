@@ -82,7 +82,7 @@ RETURNS TABLE (
     "UserId" integer, "DocumentType" text, "StatusId" integer, "RejectionReason" character varying(1000),
     "User_UserId" integer, "FullName" character varying(100), "Username" character varying(50), "Password" character varying(100), 
     "Email" character varying(50), "MobileNo" character varying(10), "DOB" timestamp with time zone, 
-    "RoleId" integer, "Gender" text, "CreatedDate" timestamp with time zone
+    "RoleId" integer, "Gender" text, "CreatedDate" timestamp with time zone, "Status" integer, "StatusReason" text
 )
 LANGUAGE plpgsql
 AS $$
@@ -92,7 +92,7 @@ BEGIN
         SELECT d."DocumentId", d."FileName", d."FilePath", d."UploadedDate", 
                d."UserId", d."DocumentType", d."StatusId", d."RejectionReason",
                u."UserId" AS "User_UserId", u."FullName", u."Username", u."Password", u."Email", 
-               u."MobileNo", u."DOB", u."RoleId", u."Gender", u."CreatedDate"
+               u."MobileNo", u."DOB", u."RoleId", u."Gender", u."CreatedDate", u."Status", u."StatusReason"
         FROM "Documents" d 
         LEFT JOIN "Users" u ON d."UserId" = u."UserId" 
         WHERE d."UserId" = p_userid 
@@ -102,7 +102,7 @@ BEGIN
         SELECT d."DocumentId", d."FileName", d."FilePath", d."UploadedDate", 
                d."UserId", d."DocumentType", d."StatusId", d."RejectionReason",
                u."UserId" AS "User_UserId", u."FullName", u."Username", u."Password", u."Email", 
-               u."MobileNo", u."DOB", u."RoleId", u."Gender", u."CreatedDate"
+               u."MobileNo", u."DOB", u."RoleId", u."Gender", u."CreatedDate", u."Status", u."StatusReason"
         FROM "Documents" d 
         LEFT JOIN "Users" u ON d."UserId" = u."UserId" 
         ORDER BY d."UploadedDate" DESC;
