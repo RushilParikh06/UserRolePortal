@@ -1,6 +1,6 @@
 @model List<UserRolePortal.Models.Document>
 @{
-    ViewData["Title"] = "Documents";
+    ViewData["Title"] ="Documents";
     int totalDocs     = Model?.Count ?? 0;
     int pendingCount  = Model?.Count(d => d.StatusId == 1) ?? 0;
     int verifiedCount = Model?.Count(d => d.StatusId == 2) ?? 0;
@@ -29,7 +29,7 @@
     /* table row status stripes */
     #documentTable tbody tr[data-status="Rejected"] { background: rgba(220,53,69,0.04); }
     #documentTable tbody tr[data-status="Verified"]  { background: rgba(40,199,111,0.03); }
-    #documentTable tbody tr:hover { background: rgba(255,255,255,0.04) !important; }
+    #documentTable tbody tr:hover { background: var(--table-hover) !important; }
 
     /* sticky table header */
     #documentTable thead tr th { position: sticky; top: 0; z-index: 1; }
@@ -43,11 +43,11 @@
     }
     .act-btn:hover  { opacity: .85; transform: translateY(-1px); }
     .act-btn:active { transform: translateY(0); }
-    .act-btn.green  { background:rgba(40,199,111,0.12);  color:#28c76f; border-color:rgba(40,199,111,0.3);  }
-    .act-btn.red    { background:rgba(220,53,69,0.10);   color:#dc3545; border-color:rgba(220,53,69,0.3);   }
-    .act-btn.orange { background:rgba(255,91,0,0.12);    color:#ff5b00; border-color:rgba(255,91,0,0.3);    }
-    .act-btn.pink   { background:rgba(255,77,109,0.12);  color:#ff4d6d; border-color:rgba(255,77,109,0.3);  }
-    .act-btn.ghost  { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.75); border-color:rgba(255,255,255,0.15); }
+    .act-btn.green  { background:transparent;  color:#28c76f; border-color:rgba(40,199,111,0.3);  }
+    .act-btn.red    { background:transparent;   color:#dc3545; border-color:rgba(220,53,69,0.3);   }
+    .act-btn.orange { background:transparent;    color:#ff5b00; border-color:rgba(255,91,0,0.3);    }
+    .act-btn.pink   { background:transparent;  color:#ff4d6d; border-color:rgba(255,77,109,0.3);  }
+    .act-btn.ghost  { background:transparent; color:var(--text-muted); border-color:var(--border-color); }
 
     /* reason cell */
     .reason-cell {
@@ -64,7 +64,7 @@
         display: flex; align-items: center; gap: 11px;
         box-shadow: 0 8px 32px rgba(0,0,0,0.5);
         transition: top .45s cubic-bezier(.4,0,.2,1);
-        background: #1a1617; color: #fff; border-left: 5px solid #ff5b00;
+        background: var(--bg-card); color: var(--text-main); border-left: 5px solid #ff5b00;
     }
 
     /* column resize handle */
@@ -80,7 +80,6 @@
 
     /* sortable header hover */
     .resizable-th[data-sort]:hover {
-        color: #fff !important;
         background: rgba(255,91,0,0.07);
     }
     .resizable-th.sort-asc .sort-icon::after  { content: ' ↑'; opacity:1; }
@@ -97,11 +96,23 @@
 
 <div class="container-fluid px-4 mt-4">
 
+    @if (ViewBag.IsAdminReviewMode == true && !User.IsInRole("SuperAdmin"))
+    {
+        <ul class="nav nav-tabs mb-4 border-0" id="adminWorkspaceTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active px-4 py-3 rounded-top" id="mydocs-tab" type="button" role="tab" style="color:#ff5b00; background:var(--bg-card); border:none; font-weight:600;" onclick="switchAdminWorkspace('mydocs')">My Documents</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link px-4 py-3 rounded-top" id="review-tab" type="button" role="tab" style="color:var(--text-muted); background:transparent; border:none; font-weight:600;" onclick="switchAdminWorkspace('review')">Review Queue</button>
+            </li>
+        </ul>
+    }
+
     @if (!User.IsInRole("SuperAdmin"))
     {
     <!-- ── UPLOAD FORM ─────────────────────────────── -->
-    <div class="card shadow-sm mb-5 border-0">
-        <div class="card-header bg-dark text-white border-0 py-3">
+    <div class="card shadow-sm mb-5 border-0" id="uploadFormSection">
+        <div class="card-header   border-0 py-3">
             <h5 class="mb-0 fw-bold">
                 <i class="fa-solid fa-file-arrow-up me-2" style="color:#ff5b00;"></i> Upload a New Document
             </h5>
@@ -126,19 +137,19 @@
                 <div class="row align-items-end g-3">
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Aadhar Card <span class="text-danger">*</span></label>
-                        <input type="file" name="aadharFile" class="form-control bg-light" required />
+                        <input type="file" name="aadharFile" class="form-control" required />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-bold">PAN Card <span class="text-danger">*</span></label>
-                        <input type="file" name="panFile" class="form-control bg-light" required />
+                        <input type="file" name="panFile" class="form-control" required />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Other Documents <span class="text-muted fw-normal">(Optional)</span></label>
-                        <input type="file" name="optionalFiles" class="form-control bg-light" multiple />
+                        <input type="file" name="optionalFiles" class="form-control" multiple />
                     </div>
                 </div>
                 <div class="mt-4 text-end">
-                    <button type="submit" class="btn text-white fw-bold px-5 py-2" style="background-color:#ff5b00;">
+                    <button type="submit" class="btn  fw-bold px-5 py-2" style="background-color:#ff5b00;">
                         <i class="fas fa-upload me-2"></i> Upload Documents
                     </button>
                 </div>
@@ -150,17 +161,17 @@
     <!-- ── STAT PILLS (Admin only) ─────────────────── -->
     @if (ViewBag.IsAdminReviewMode == true)
     {
-        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-            <span class="stat-pill" style="background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.7);">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3" id="statPillsSection" style="display:none;">
+            <span class="stat-pill" style="background:transparent; color:var(--text-muted);">
                 <i class="fas fa-layer-group" style="color:#ff5b00;"></i> @totalDocs Total
             </span>
-            <span class="stat-pill" style="background:rgba(255,193,7,0.1); color:#ffc107;">
+            <span class="stat-pill" style="background:transparent; border: 1px solid var(--border-color); color:#ffc107;">
                 <i class="fas fa-hourglass-half"></i> @pendingCount Pending
             </span>
-            <span class="stat-pill" style="background:rgba(40,199,111,0.1); color:#28c76f;">
+            <span class="stat-pill" style="background:transparent; border: 1px solid var(--border-color); color:#28c76f;">
                 <i class="fas fa-shield-alt"></i> @verifiedCount Verified
             </span>
-            <span class="stat-pill" style="background:rgba(220,53,69,0.1); color:#ff4d6d;">
+            <span class="stat-pill" style="background:transparent; border: 1px solid var(--border-color); color:#ff4d6d;">
                 <i class="fas fa-ban"></i> @rejectedCount Rejected
             </span>
         </div>
@@ -169,24 +180,24 @@
     <!-- ── SEARCH BAR (Admin only) ────────────────── -->
     @if (ViewBag.IsAdminReviewMode == true)
     {
-        <div class="card border-0 shadow-sm mb-3" style="background:#1a1617;">
+        <div class="card border-0 shadow-sm mb-3" style="background:var(--bg-card); display:none;" id="searchBarSection">
             <div class="card-body py-2 px-3">
                 <div class="row align-items-center g-2">
                     <div class="col-md-6">
                         <div class="input-group input-group-sm">
                             <span class="input-group-text border-0"
-                                  style="background:#141112; color:rgba(255,255,255,0.4);">
+                                  style="background:var(--bg-main); color:var(--text-muted);">
                                 <i class="fas fa-search"></i>
                             </span>
                             <input type="text" id="searchInput" class="form-control border-0"
                                    placeholder="Search by file name, uploader, or type..."
-                                   style="background:#141112; color:#fff;"
+                                   style="background:var(--bg-main); color:var(--text-main);"
                                    onkeyup="filterTable()">
                         </div>
                     </div>
                     <div class="col-md-3">
                         <select id="statusFilter" class="form-select form-select-sm border-0 custom-select" onchange="filterTable()"
-                                style="background:#141112; color:#fff;">
+                                style="background:var(--bg-main); color:var(--text-main);">
                             <option value="">All Statuses</option>
                             <option value="Pending">Pending</option>
                             <option value="Verified">Verified</option>
@@ -194,7 +205,7 @@
                         </select>
                     </div>
                     <div class="col-md-3 text-end">
-                        <span id="resultCount" style="color:rgba(255,255,255,0.5); font-size:12px;">
+                        <span id="resultCount" style="color:var(--text-muted); font-size:12px;">
                             <strong style="color:#ff5b00;">@totalDocs</strong> documents
                         </span>
                     </div>
@@ -207,68 +218,71 @@
     {
         <ul class="nav nav-tabs mb-0 border-0" id="roleTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active px-4 py-3 rounded-top" id="users-tab" type="button" role="tab" style="color:#ff5b00; background:#1a1617; border:none; font-weight:600;" onclick="filterByRoleType(2)">Users</button>
+                <button class="nav-link active px-4 py-3 rounded-top" id="users-tab" type="button" role="tab" style="color:#ff5b00; background:var(--bg-card); border:none; font-weight:600;" onclick="filterByRoleType(2)">Users</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link px-4 py-3 rounded-top" id="admins-tab" type="button" role="tab" style="color:rgba(255,255,255,0.5); background:transparent; border:none; font-weight:600;" onclick="filterByRoleType(1)">Admins</button>
+                <button class="nav-link px-4 py-3 rounded-top" id="admins-tab" type="button" role="tab" style="color:var(--text-muted); background:transparent; border:none; font-weight:600;" onclick="filterByRoleType(1)">Admins</button>
             </li>
         </ul>
     }
 
     <!-- ── DOCUMENTS TABLE ─────────────────────────── -->
-    <div class="card border-0 shadow-sm" style="background:#1a1617; @(User.IsInRole("SuperAdmin") ? "border-top-left-radius:0;" : "")">
+    <div class="card border-0 shadow-sm" style="background:var(--bg-card); @(User.IsInRole("SuperAdmin") ?"border-top-left-radius:0;" :"")">
         <div class="card-header py-3 px-4 d-flex align-items-center justify-content-between"
-             style="background:#141112; border-bottom:1px solid rgba(255,91,0,0.2);">
+             style="background:var(--bg-main); border-bottom:1px solid rgba(255,91,0,0.2);">
             <div class="d-flex align-items-center gap-2">
                 <i class="fas fa-folder-open" style="color:#ff5b00;"></i>
-                <h6 class="mb-0 fw-bold text-white">Recently Uploaded Documents</h6>
+                <h6 class="mb-0 fw-bold">Recently Uploaded Documents</h6>
             </div>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive" style="max-height:520px; overflow-y:auto;">
                 <table class="table mb-0" id="documentTable" style="border-collapse:separate; width:100%;">
                     <thead>
-                        <tr id="docTableHead" style="background:#141112; border-bottom:2px solid #ff5b00;">
+                        <tr id="docTableHead" style="background:var(--bg-main); border-bottom:2px solid #ff5b00;">
                             <th class="py-3 px-4 text-nowrap resizable-th" data-col="0" data-sort="number"
-                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; user-select:none; cursor:pointer; min-width:40px;">
+                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-muted); position:relative; user-select:none; cursor:pointer; min-width:40px;">
                                 # <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span>
                                 <div class="col-resizer"></div>
                             </th>
                             <th class="py-3 px-3 text-nowrap resizable-th" data-col="1" data-sort="text"
-                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; user-select:none; cursor:pointer; min-width:100px;">
+                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-muted); position:relative; user-select:none; cursor:pointer; min-width:100px;">
                                 File Name <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span>
                                 <div class="col-resizer"></div>
                             </th>
                             <th class="py-3 px-3 text-nowrap resizable-th" data-col="2" data-sort="text"
-                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; user-select:none; cursor:pointer; min-width:80px;">
+                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-muted); position:relative; user-select:none; cursor:pointer; min-width:80px;">
                                 Type <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span>
                                 <div class="col-resizer"></div>
                             </th>
                             @if (ViewBag.IsAdminReviewMode == true)
                             {
                                 <th class="py-3 px-3 text-nowrap resizable-th" data-col="3" data-sort="text"
-                                    style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; user-select:none; cursor:pointer; min-width:80px;">
+                                    style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-muted); position:relative; user-select:none; cursor:pointer; min-width:80px;">
                                     Uploaded By <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span>
                                     <div class="col-resizer"></div>
                                 </th>
                             }
                             <th class="py-3 px-3 text-nowrap resizable-th" data-col="@(ViewBag.IsAdminReviewMode == true ? 4 : 3)" data-sort="date"
-                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; user-select:none; cursor:pointer; min-width:90px;">
+                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-muted); position:relative; user-select:none; cursor:pointer; min-width:90px;">
                                 Date <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span>
                                 <div class="col-resizer"></div>
                             </th>
                             <th class="py-3 px-3 text-nowrap resizable-th" data-col="@(ViewBag.IsAdminReviewMode == true ? 5 : 4)" data-sort="status"
-                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; user-select:none; cursor:pointer; min-width:80px;">
+                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-muted); position:relative; user-select:none; cursor:pointer; min-width:80px;">
                                 Status <span class="sort-icon ms-1" style="opacity:.4; font-size:10px;">⇅</span>
                                 <div class="col-resizer"></div>
                             </th>
-                            <th class="py-3 px-3 text-nowrap resizable-th" data-col="@(ViewBag.IsAdminReviewMode == true ? 6 : 5)" data-sort="text"
-                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#ff4d6d; position:relative; user-select:none; min-width:100px;">
-                                <i class="fas fa-comment-slash me-1"></i>Rejection Reason
-                                <div class="col-resizer"></div>
-                            </th>
+                            @if (Model != null && Model.Any(d => d.StatusId == 3))
+                            {
+                                <th class="py-3 px-3 text-nowrap resizable-th" data-col="@(ViewBag.IsAdminReviewMode == true ? 6 : 5)" data-sort="text"
+                                    style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#ff4d6d; position:relative; user-select:none; min-width:100px;">
+                                    <i class="fas fa-comment-slash me-1"></i>Rejection Reason
+                                    <div class="col-resizer"></div>
+                                </th>
+                            }
                             <th class="py-3 px-4 text-nowrap text-end resizable-th"
-                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,0.55); position:relative; min-width:120px;">
+                                style="font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-muted); position:relative; min-width:120px;">
                                 Actions
                                 <div class="col-resizer"></div>
                             </th>
@@ -280,20 +294,22 @@
                             int rowNum = 1;
                             foreach (var doc in Model)
                             {
-                                string rowStatus = doc.StatusId == 2 ? "Verified" : doc.StatusId == 3 ? "Rejected" : "Pending";
-                                <tr data-status="@rowStatus" data-roletype="@(doc.UploadedBy?.RoleId ?? 2)" style="border-bottom:1px solid rgba(255,255,255,0.05); transition:background .15s; @((doc.UploadedBy?.RoleId == 1 && User.IsInRole("SuperAdmin")) ? "display:none;" : "")">
+                                string rowStatus = doc.StatusId == 2 ?"Verified" : doc.StatusId == 3 ?"Rejected" :"Pending";
+                                int currentUserIdTr = int.Parse(User.FindFirst("UserId")?.Value ??"0");
+                                bool isOwn = (doc.UserId == currentUserIdTr);
+                                <tr data-status="@rowStatus" data-isown="@isOwn.ToString().ToLower()" data-roletype="@(doc.UploadedBy?.RoleId ?? 2)" style="border-bottom:1px solid var(--border-color); transition:background .15s; @((doc.UploadedBy?.RoleId == 1 && User.IsInRole("SuperAdmin")) ?"display:none;" :"")">
 
                                     <!-- # -->
-                                    <td class="align-middle px-4" style="color:rgba(255,255,255,0.25); font-size:12px; font-weight:700;">@rowNum</td>
+                                    <td class="align-middle px-4" style="color:var(--text-muted); font-size:12px; font-weight:700;">@rowNum</td>
 
                                     <!-- File Name -->
                                     <td class="align-middle px-3">
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="rounded-2 d-flex align-items-center justify-content-center flex-shrink-0"
-                                                 style="width:32px; height:32px; background:rgba(255,91,0,0.12);">
+                                                 style="width:32px; height:32px; background:transparent;">
                                                 <i class="fas fa-file-pdf" style="color:#ff5b00; font-size:13px;"></i>
                                             </div>
-                                            <span class="fw-semibold text-white" style="font-size:13px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="@doc.FileName">
+                                            <span class="fw-semibold" style="font-size:13px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="@doc.FileName">
                                                 @doc.FileName
                                             </span>
                                         </div>
@@ -301,7 +317,7 @@
 
                                     <!-- Type -->
                                     <td class="align-middle px-3">
-                                        <span style="background:rgba(255,91,0,0.12); color:#ff5b00; border:1px solid rgba(255,91,0,0.2); border-radius:20px; padding:3px 10px; font-size:11px; font-weight:700; white-space:nowrap;">
+                                        <span style="background:transparent; color:#ff5b00; border:1px solid rgba(255,91,0,0.2); border-radius:20px; padding:3px 10px; font-size:11px; font-weight:700; white-space:nowrap;">
                                             @doc.DocumentType
                                         </span>
                                     </td>
@@ -312,17 +328,17 @@
                                         <td class="align-middle px-3">
                                             <div class="d-flex align-items-center gap-2">
                                                 <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                                                     style="width:26px; height:26px; background:rgba(255,255,255,0.08); font-size:10px; font-weight:800; color:rgba(255,255,255,0.7);">
-                                                    @(doc.UploadedBy?.FullName?.Substring(0,1).ToUpper() ?? "?")
+                                                     style="width:26px; height:26px; background:rgba(255,255,255,0.08); font-size:10px; font-weight:800; color:var(--text-muted);">
+                                                    @(doc.UploadedBy?.FullName?.Substring(0,1).ToUpper() ??"?")
                                                 </div>
-                                                <span class="text-white" style="font-size:13px;">@doc.UploadedBy?.FullName</span>
+                                                <span class="" style="font-size:13px;">@doc.UploadedBy?.FullName</span>
                                             </div>
                                         </td>
                                     }
 
                                     <!-- Date -->
                                     <td class="align-middle px-3" style="white-space:nowrap;">
-                                        <div class="fw-semibold text-white" style="font-size:13px;">
+                                        <div class="fw-semibold" style="font-size:13px;">
                                             @doc.UploadedDate.ToLocalTime().ToString("dd MMM yyyy")
                                         </div>
                                         <div style="color:rgba(255,255,255,0.35); font-size:11px;">
@@ -334,46 +350,45 @@
                                     <td class="align-middle px-3">
                                         @if (doc.StatusId == 2)
                                         {
-                                            <span style="background:rgba(40,199,111,0.12); color:#28c76f; border:1px solid rgba(40,199,111,0.25); border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; white-space:nowrap;">
+                                            <span style="background:transparent; color:#28c76f; border:1px solid rgba(40,199,111,0.25); border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; white-space:nowrap;">
                                                 <i class="fas fa-shield-alt me-1"></i>Verified
                                             </span>
                                         }
                                         else if (doc.StatusId == 3)
                                         {
-                                            <span style="background:rgba(220,53,69,0.12); color:#ff4d6d; border:1px solid rgba(220,53,69,0.25); border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; white-space:nowrap;">
+                                            <span style="background:transparent; border: 1px solid var(--border-color); color:#ff4d6d; border:1px solid rgba(220,53,69,0.25); border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; white-space:nowrap;">
                                                 <i class="fas fa-ban me-1"></i>Rejected
                                             </span>
                                         }
                                         else
                                         {
-                                            <span style="background:rgba(255,193,7,0.12); color:#ffc107; border:1px solid rgba(255,193,7,0.25); border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; white-space:nowrap;">
+                                            <span style="background:transparent; border: 1px solid var(--border-color); color:#ffc107; border:1px solid rgba(255,193,7,0.25); border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; white-space:nowrap;">
                                                 <i class="fas fa-hourglass-half me-1"></i>Pending
                                             </span>
                                         }
                                     </td>
 
                                     <!-- Rejection Reason -->
-                                    <td class="align-middle px-3" style="min-width:150px; max-width:200px;">
-                                        @if (doc.StatusId == 3 && !string.IsNullOrEmpty(doc.RejectionReason))
-                                        {
-                                            <div style="border-left: 3px solid rgba(255,77,109,0.6); padding-left:8px;">
-                                                <div style="color:#ff4d6d; font-size:12px; line-height:1.55; word-break:break-word; white-space:normal;">
-                                                    @doc.RejectionReason
+                                    @if (Model != null && Model.Any(d => d.StatusId == 3))
+                                    {
+                                        <td class="align-middle px-3" style="min-width:150px; max-width:200px;">
+                                            @if (doc.StatusId == 3 && !string.IsNullOrEmpty(doc.RejectionReason))
+                                            {
+                                                <div style="border-left: 3px solid rgba(255,77,109,0.6); padding-left:8px;">
+                                                    <div style="color:#ff4d6d; font-size:12px; line-height:1.55; word-break:break-word; white-space:normal;">
+                                                        @doc.RejectionReason
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <span style="color:rgba(255,255,255,0.15); font-size:15px; letter-spacing:1px;">—</span>
-                                        }
-                                    </td>
+                                            }
+                                        </td>
+                                    }
 
                                     <!-- Actions: always a single horizontal row, no wrap -->
                                     <td class="align-middle px-3" style="white-space:nowrap;">
                                         <div class="d-flex justify-content-end align-items-center gap-1" style="flex-wrap:nowrap;">
 
                                             @{
-                                                int currentUserId = int.Parse(User.FindFirst("UserId")?.Value ?? "0");
+                                                int currentUserId = int.Parse(User.FindFirst("UserId")?.Value ??"0");
                                                 bool isOwnDocument = (doc.UserId == currentUserId);
                                                 bool canVerify = (ViewBag.IsAdminReviewMode == true) && !isOwnDocument;
                                                 
@@ -431,7 +446,7 @@
                                              style="width:60px; height:60px; background:rgba(255,91,0,0.1);">
                                             <i class="fas fa-folder-open fa-xl" style="color:rgba(255,91,0,0.5);"></i>
                                         </div>
-                                        <h6 class="text-white mb-1">No documents uploaded yet</h6>
+                                        <h6 class="mb-1">No documents uploaded yet</h6>
                                         <p class="mb-0" style="color:rgba(255,255,255,0.35); font-size:13px;">Use the upload form above to get started.</p>
                                     </div>
                                 </td>
@@ -449,7 +464,7 @@
 <!-- DELETE MODAL -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0" style="background:#120f10; box-shadow:0 24px 64px rgba(0,0,0,0.65);">
+        <div class="modal-content border-0" style="background:var(--bg-card); box-shadow:0 24px 64px rgba(0,0,0,0.65);">
             <div class="modal-header border-0 px-4 pt-4 pb-0">
                 <div class="d-flex align-items-center gap-3">
                     <div class="rounded-3 d-flex align-items-center justify-content-center"
@@ -457,7 +472,7 @@
                         <i class="fas fa-trash-alt" style="color:#dc3545; font-size:17px;"></i>
                     </div>
                     <div>
-                        <h5 class="mb-0 fw-bold text-white">Delete Document</h5>
+                        <h5 class="mb-0 fw-bold">Delete Document</h5>
                         <small style="color:rgba(255,255,255,0.35);">Permanent &amp; irreversible action</small>
                     </div>
                 </div>
@@ -465,7 +480,7 @@
             </div>
             <div class="modal-body px-4 py-3">
                 <div class="rounded-3 p-3" style="background:rgba(220,53,69,0.07); border:1px solid rgba(220,53,69,0.18);">
-                    <p class="mb-1 text-white" style="font-size:13px;">You are permanently deleting:</p>
+                    <p class="mb-1" style="font-size:13px;">You are permanently deleting:</p>
                     <p class="mb-0 fw-bold" style="color:#dc3545; font-size:14px;">
                         <i class="fas fa-file-pdf me-2"></i><span id="deleteDocumentName"></span>
                     </p>
@@ -480,7 +495,7 @@
                 <button type="button" class="act-btn ghost px-4 py-2" data-bs-dismiss="modal" style="border-radius:8px; font-size:13px;">
                     <i class="fas fa-arrow-left"></i> Cancel
                 </button>
-                <button type="button" class="act-btn red px-4 py-2" onclick="confirmDelete()" style="border-radius:8px; font-size:13px; background:#dc3545; color:#fff;">
+                <button type="button" class="act-btn red px-4 py-2" onclick="confirmDelete()" style="border-radius:8px; font-size:13px; background:#dc3545; color:var(--text-main);">
                     <i class="fas fa-trash-alt"></i> Yes, Delete Permanently
                 </button>
             </div>
@@ -491,7 +506,7 @@
 <!-- VERIFY / APPROVE MODAL -->
 <div class="modal fade" id="verifyModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0" style="background:#120f10; box-shadow:0 24px 64px rgba(0,0,0,0.65);">
+        <div class="modal-content border-0" style="background:var(--bg-card); box-shadow:0 24px 64px rgba(0,0,0,0.65);">
             <div class="modal-header border-0 px-4 pt-4 pb-0">
                 <div class="d-flex align-items-center gap-3">
                     <div class="rounded-3 d-flex align-items-center justify-content-center"
@@ -499,7 +514,7 @@
                         <i class="fas fa-check-double" style="color:#28c76f; font-size:17px;"></i>
                     </div>
                     <div>
-                        <h5 class="mb-0 fw-bold text-white">Approve Document</h5>
+                        <h5 class="mb-0 fw-bold">Approve Document</h5>
                         <small style="color:rgba(255,255,255,0.35);">Mark as officially verified</small>
                     </div>
                 </div>
@@ -507,7 +522,7 @@
             </div>
             <div class="modal-body px-4 py-3">
                 <div class="rounded-3 p-3" style="background:rgba(40,199,111,0.07); border:1px solid rgba(40,199,111,0.18);">
-                    <p class="mb-1 text-white" style="font-size:13px;">You are approving:</p>
+                    <p class="mb-1" style="font-size:13px;">You are approving:</p>
                     <p class="mb-0 fw-bold" style="color:#28c76f; font-size:14px;">
                         <i class="fas fa-file-pdf me-2"></i><span id="verifyDocumentName"></span>
                     </p>
@@ -533,7 +548,7 @@
 <!-- REJECT MODAL -->
 <div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0" style="background:#120f10; box-shadow:0 24px 64px rgba(0,0,0,0.65);">
+        <div class="modal-content border-0" style="background:var(--bg-card); box-shadow:0 24px 64px rgba(0,0,0,0.65);">
             <div class="modal-header border-0 px-4 pt-4 pb-0">
                 <div class="d-flex align-items-center gap-3">
                     <div class="rounded-3 d-flex align-items-center justify-content-center"
@@ -541,7 +556,7 @@
                         <i class="fas fa-ban" style="color:#ff5b00; font-size:17px;"></i>
                     </div>
                     <div>
-                        <h5 class="mb-0 fw-bold text-white">Reject Document</h5>
+                        <h5 class="mb-0 fw-bold">Reject Document</h5>
                         <small style="color:rgba(255,255,255,0.35);">Provide a clear reason for the user</small>
                     </div>
                 </div>
@@ -549,18 +564,18 @@
             </div>
             <div class="modal-body px-4 py-3">
                 <div class="rounded-3 p-3 mb-3" style="background:rgba(255,91,0,0.07); border:1px solid rgba(255,91,0,0.2);">
-                    <p class="mb-1 text-white" style="font-size:13px;">Rejecting:</p>
+                    <p class="mb-1" style="font-size:13px;">Rejecting:</p>
                     <p class="mb-0 fw-bold" style="color:#ff5b00; font-size:14px;">
                         <i class="fas fa-file-pdf me-2"></i><span id="rejectDocumentName"></span>
                     </p>
                 </div>
-                <label class="form-label fw-semibold text-white mb-1" style="font-size:13px;">
+                <label class="form-label fw-semibold  mb-1" style="font-size:13px;">
                     <i class="fas fa-comment-alt me-1" style="color:#ff5b00;"></i>
                     Rejection Reason <span class="text-danger">*</span>
                 </label>
                 <textarea id="rejectReason" class="form-control" rows="3"
                           placeholder="Write a clear reason so the user knows what to fix..."
-                          style="background:#1a1617; color:#fff; border:1px solid rgba(255,91,0,0.25); resize:none; font-size:13px;"></textarea>
+                          style="background:var(--bg-card); color:var(--text-main); border:1px solid rgba(255,91,0,0.25); resize:none; font-size:13px;"></textarea>
                 <div id="rejectReasonError" class="mt-1" style="display:none; color:#ff4d6d; font-size:12px;">
                     <i class="fas fa-exclamation-circle me-1"></i>Rejection reason is required.
                 </div>
@@ -574,7 +589,7 @@
                 <button type="button" class="act-btn ghost px-4 py-2" data-bs-dismiss="modal" style="border-radius:8px; font-size:13px;">
                     <i class="fas fa-arrow-left"></i> Cancel
                 </button>
-                <button type="button" class="act-btn orange px-4 py-2" onclick="confirmReject()" style="border-radius:8px; font-size:13px; background:#ff5b00; color:#fff;">
+                <button type="button" class="act-btn px-4 py-2" style="background:#ff5b00; color:#000000; border:none;" onclick="confirmReject()" style="border-radius:8px; font-size:13px; background:#ff5b00; color:var(--text-main);">
                     <i class="fas fa-ban"></i> Submit Rejection
                 </button>
             </div>
@@ -585,7 +600,7 @@
 <!-- FEEDBACK MODAL (User view for rejection reason) -->
 <div class="modal fade" id="feedbackModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0" style="background:#120f10; box-shadow:0 24px 64px rgba(0,0,0,0.65);">
+        <div class="modal-content border-0" style="background:var(--bg-card); box-shadow:0 24px 64px rgba(0,0,0,0.65);">
             <div class="modal-header border-0 px-4 pt-4 pb-0">
                 <div class="d-flex align-items-center gap-3">
                     <div class="rounded-3 d-flex align-items-center justify-content-center"
@@ -593,16 +608,16 @@
                         <i class="fas fa-comment-slash" style="color:#ff4d6d; font-size:17px;"></i>
                     </div>
                     <div>
-                        <h5 class="mb-0 fw-bold text-white">Document Rejected</h5>
+                        <h5 class="mb-0 fw-bold">Document Rejected</h5>
                         <small style="color:rgba(255,255,255,0.35);">Review the admin's feedback below</small>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body px-4 py-3">
-                <p class="mb-2" style="color:rgba(255,255,255,0.5); font-size:12px;">
+                <p class="mb-2" style="color:var(--text-muted); font-size:12px;">
                     <i class="fas fa-file-pdf me-1" style="color:#ff5b00;"></i>
-                    <span id="feedbackFileName" class="fw-semibold text-white"></span>
+                    <span id="feedbackFileName" class="fw-semibold"></span>
                 </p>
                 <div class="rounded-3 p-3" style="background:rgba(255,77,109,0.08); border:1px solid rgba(255,77,109,0.2);">
                     <p class="mb-0" style="color:rgba(255,255,255,0.8); font-size:13px; line-height:1.65;" id="feedbackReason"></p>
@@ -628,13 +643,13 @@
 
             <!-- Header bar -->
             <div class="modal-header border-0 px-4 py-2 d-flex align-items-center"
-                 style="background:#141112; border-bottom:1px solid rgba(255,91,0,0.2); min-height:54px;">
+                 style="background:var(--bg-main); border-bottom:1px solid rgba(255,91,0,0.2); min-height:54px;">
                 <div class="d-flex align-items-center gap-2 me-auto">
                     <div class="rounded-2 d-flex align-items-center justify-content-center"
                          style="width:32px; height:32px; background:rgba(255,91,0,0.15);">
                         <i class="fas fa-file-pdf" style="color:#ff5b00; font-size:14px;"></i>
                     </div>
-                    <span id="pdfViewerTitle" class="fw-semibold text-white" style="font-size:14px; max-width:480px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+                    <span id="pdfViewerTitle" class="fw-semibold" style="font-size:14px; max-width:480px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
                 </div>
 
                 <!-- Action buttons in header -->
@@ -660,7 +675,7 @@
                         src=""
                         style="width:100%; height:100%; border:none;"
                         title="PDF Viewer">
-                    <p class="text-white p-4">Your browser does not support inline PDF viewing.
+                    <p class="p-4">Your browser does not support inline PDF viewing.
                         <a id="pdfFallbackLink" href="#" style="color:#ff5b00;">Click here to download the file.</a>
                     </p>
                 </iframe>
@@ -762,17 +777,50 @@
         window.currentRoleTypeFilter = type;
         if (type === 2) {
             document.getElementById('users-tab').style.color = '#ff5b00';
-            document.getElementById('users-tab').style.background = '#1a1617';
-            document.getElementById('admins-tab').style.color = 'rgba(255,255,255,0.5)';
+            document.getElementById('users-tab').style.background = 'var(--bg-card)';
+            document.getElementById('admins-tab').style.color = 'var(--text-muted)';
             document.getElementById('admins-tab').style.background = 'transparent';
         } else {
             document.getElementById('admins-tab').style.color = '#ff5b00';
-            document.getElementById('admins-tab').style.background = '#1a1617';
-            document.getElementById('users-tab').style.color = 'rgba(255,255,255,0.5)';
+            document.getElementById('admins-tab').style.background = '#0a0a0a';
+            document.getElementById('users-tab').style.color = 'var(--text-muted)';
             document.getElementById('users-tab').style.background = 'transparent';
         }
         filterTable();
     }
+
+    window.currentAdminWorkspace = 'mydocs'; // default
+
+    function switchAdminWorkspace(workspace) {
+        window.currentAdminWorkspace = workspace;
+        if (workspace === 'mydocs') {
+            document.getElementById('mydocs-tab').style.color = '#ff5b00';
+            document.getElementById('mydocs-tab').style.background = 'var(--bg-card)';
+            document.getElementById('review-tab').style.color = 'var(--text-muted)';
+            document.getElementById('review-tab').style.background = 'transparent';
+            
+            if(document.getElementById('uploadFormSection')) document.getElementById('uploadFormSection').style.display = 'block';
+            if(document.getElementById('statPillsSection')) document.getElementById('statPillsSection').style.display = 'none';
+            if(document.getElementById('searchBarSection')) document.getElementById('searchBarSection').style.display = 'none';
+        } else {
+            document.getElementById('review-tab').style.color = '#ff5b00';
+            document.getElementById('review-tab').style.background = 'var(--bg-card)';
+            document.getElementById('mydocs-tab').style.color = 'var(--text-muted)';
+            document.getElementById('mydocs-tab').style.background = 'transparent';
+            
+            if(document.getElementById('uploadFormSection')) document.getElementById('uploadFormSection').style.display = 'none';
+            if(document.getElementById('statPillsSection')) document.getElementById('statPillsSection').style.display = 'flex';
+            if(document.getElementById('searchBarSection')) document.getElementById('searchBarSection').style.display = 'block';
+        }
+        filterTable();
+    }
+
+    // Call this on load if tabs exist
+    document.addEventListener('DOMContentLoaded', function() {
+        if(document.getElementById('adminWorkspaceTab')) {
+            switchAdminWorkspace('mydocs');
+        }
+    });
 
     function filterTable() {
         const q      = (document.getElementById('searchInput')?.value || '').toLowerCase();
@@ -791,9 +839,20 @@
                 roleTypeMatch = (roleType === activeRoleTypeFilter);
             }
 
+            let workspaceMatch = true;
+            if (document.getElementById('adminWorkspaceTab')) {
+                const isOwn = row.getAttribute('data-isown') === 'true';
+                if (window.currentAdminWorkspace === 'mydocs') {
+                    workspaceMatch = isOwn;
+                } else {
+                    workspaceMatch = !isOwn;
+                }
+            }
+
             const match = row.textContent.toLowerCase().includes(q)
                        && (!filter || row.getAttribute('data-status') === filter)
-                       && roleTypeMatch;
+                       && roleTypeMatch
+                       && workspaceMatch;
             row.style.display = match ? '' : 'none';
             if (match) count++;
         });
