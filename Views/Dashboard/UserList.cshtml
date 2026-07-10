@@ -252,12 +252,12 @@
                                             {
                                                 <button class="act-btn ghost" title="Edit User"
                                                         data-bs-toggle="modal" data-bs-target="#editModal"
-                                                        onclick="loadUserData(@user.UserId, '@Html.Raw(user.FullName?.Replace("'","\\'"))', '@Html.Raw(user.Email?.Replace("'","\\'"))', '@Html.Raw(user.MobileNo?.Replace("'","\\'"))', @user.RoleId)">
+                                                        onclick="loadUserData(@user.UserId, '@System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(user.FullName ?? "")', '@System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(user.Email ?? "")', '@System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(user.MobileNo ?? "")', @user.RoleId)">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 <button class="act-btn red" title="Suspend User"
                                                         data-bs-toggle="modal" data-bs-target="#suspendModal"
-                                                        onclick="setStatusActionId(@user.UserId, '@Html.Raw(user.FullName?.Replace("'","\\'"))', 3)">
+                                                        onclick="setStatusActionId(@user.UserId, '@System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(user.FullName ?? "")', 3)">
                                                     <i class="fas fa-ban"></i>
                                                 </button>
                                             }
@@ -271,7 +271,7 @@
                                             {
                                                 <button class="act-btn green" title="Unsuspend User"
                                                         data-bs-toggle="modal" data-bs-target="#unsuspendModal"
-                                                        onclick="setStatusActionId(@user.UserId, '@Html.Raw(user.FullName?.Replace("'","\\'"))', 1)">
+                                                        onclick="setStatusActionId(@user.UserId, '@System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(user.FullName ?? "")', 1)">
                                                     <i class="fas fa-undo"></i> Unsuspend
                                                 </button>
                                             }
